@@ -29,6 +29,14 @@ supabase secrets set NEIS_API_KEY=<발급받은 키>
 supabase functions deploy meals
 ```
 
+### 마감 하루 전 알림 (선택)
+
+1. `supabase secrets set VAPID_KEYS='<JWK 두 개를 담은 JSON>'` (공개 키는 `src/push.js` 의 `VAPID_PUBLIC_KEY` 와 짝이어야 해요)
+2. `supabase functions deploy remind`
+3. SQL Editor 에서 [`005_push_reminder.sql`](supabase/migrations/005_push_reminder.sql) 의 `<ANON_KEY>` 를 anon 키로 바꿔 실행 (Database > Extensions 에서 pg_cron, pg_net 이 켜져 있어야 해요)
+
+매일 18시(한국 시간)에 다음 날 마감인 수행평가를 알림을 켠 학생에게 보내요.
+
 학교는 반마다 앱에서 검색해서 고르므로 학교 코드를 따로 넣을 필요가 없어요.
 대시보드에서 올린다면 **Edge Functions → meals → Code** 에 [`index.ts`](supabase/functions/meals/index.ts) 를 붙여넣고 Deploy 하면 돼요. 이 함수 하나가 급식, 시간표, 학사일정을 모두 처리해요.
 

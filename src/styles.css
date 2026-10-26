@@ -351,6 +351,9 @@ textarea { resize: vertical; line-height: 1.6; }
 .install b { color: var(--board); }
 .btn-chalk.small { min-height: 40px; font-size: 15px; background: var(--board); color: var(--board-ink); }
 
+.push-card { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: 12px; background: color-mix(in srgb, var(--highlight) 22%, transparent); }
+.push-card b, .section > .section-head > b { font-weight: 600; }
+
 /* 학교 고르기 */
 .school-picker { display: flex; flex-direction: column; gap: 6px; }
 .school-picker > label { font-size: 14px; font-weight: 500; color: var(--ink-soft); }
