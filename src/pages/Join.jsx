@@ -24,7 +24,7 @@ export default function Join() {
   }
 
   return (
-    <form className="page stack" onSubmit={submit}>
+    <form className="page form" onSubmit={submit}>
       <h1>{teacherMode ? '반 만들기' : '반 들어가기'}</h1>
       <label>
         이름
@@ -44,11 +44,11 @@ export default function Join() {
         </label>
       )}
       {error && <p className="error">{error}</p>}
-      <button className="primary big" disabled={busy}>{teacherMode ? '만들기' : '들어가기'}</button>
-      <button type="button" className="link" onClick={() => setTeacherMode(!teacherMode)}>
+      <button className="btn-primary" disabled={busy}>{teacherMode ? '만들기' : '들어가기'}</button>
+      <button type="button" className="btn-text" onClick={() => setTeacherMode(!teacherMode)}>
         {teacherMode ? '초대 코드로 들어가기' : '선생님이신가요? 반 만들기'}
       </button>
-      <button type="button" className="link muted" onClick={() => supabase.auth.signOut()}>로그아웃</button>
+      <button type="button" className="btn-text quiet" onClick={() => supabase.auth.signOut()}>로그아웃</button>
     </form>
   )
 }

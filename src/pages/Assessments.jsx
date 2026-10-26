@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../supabase.js'
 import { useSession } from '../session.jsx'
-import { today, formatDate, dday } from '../util.js'
+import { today } from '../util.js'
+import DueList from '../components/DueList.jsx'
+import { PlusIcon } from '../components/Icons.jsx'
 
 export default function Assessments() {
   const { member, canPost } = useSession()
@@ -23,12 +25,12 @@ export default function Assessments() {
   const past = filtered.filter((a) => a.due_date < t).reverse()
 
   return (
-    <div className="page stack">
-      <header className="row between">
+    <div className="page">
+      <header className="page-head">
         <h1>수행평가</h1>
-        <div className="seg">
-          <button className={view === 'list' ? 'on' : ''} onClick={() => setView('list')}>목록</button>
-          <button className={view === 'calendar' ? 'on' : ''} onClick={() => setView('calendar')}>달력</button>
+        <div className="toggle" role="tablist">
+          <button role="tab" aria-selected={view === 'list'} className={view === 'list' ? 'on' : ''} onClick={() => setView('list')}>목록</button>
+          <button role="tab" aria-selected={view === 'calendar'} className={view === 'calendar' ? 'on' : ''} onClick={() => setView('calendar')}>달력</button>
         </div>
       </header>
 
@@ -43,40 +45,22 @@ export default function Assessments() {
 
       {view === 'calendar' ? <Calendar items={filtered} /> : (
         <>
-          <AssessmentList items={upcoming} empty="예정된 수행평가가 없어요" />
+          {upcoming.length
+            ? <DueList items={upcoming} />
+            : <p className="empty">예정된 수행평가가 없어요.{canPost && ' 아래 버튼으로 첫 일정을 올려 주세요.'}</p>}
           {past.length > 0 && (
-            <>
-              <button className="link" onClick={() => setShowPast(!showPast)}>
+            <div className="past">
+              <button className="btn-text" aria-expanded={showPast} onClick={() => setShowPast(!showPast)}>
                 지난 수행평가 {past.length}개 {showPast ? '접기' : '보기'}
               </button>
-              {showPast && <AssessmentList items={past} />}
-            </>
+              {showPast && <DueList items={past} />}
+            </div>
           )}
         </>
       )}
 
-      {canPost && <Link className="fab" to="/assessments/new" aria-label="수행평가 쓰기">＋</Link>}
+      {canPost && <Link className="fab" to="/assessments/new"><PlusIcon />수행평가 쓰기</Link>}
     </div>
-  )
-}
-
-function AssessmentList({ items, empty }) {
-  if (!items.length) return empty ? <p className="muted">{empty}</p> : null
-  return (
-    <ul className="list cards">
-      {items.map((a) => (
-        <li key={a.id} className="card">
-          <Link to={`/assessments/${a.id}`} className="stack-sm">
-            <span className="row between">
-              <span className="subject">{a.subject}</span>
-              <span className="badge">{dday(a.due_date)}</span>
-            </span>
-            <b>{a.title}</b>
-            <span className="muted small">{formatDate(a.due_date)}</span>
-          </Link>
-        </li>
-      ))}
-    </ul>
   )
 }
 
@@ -97,11 +81,11 @@ function Calendar({ items }) {
   const t = today()
 
   return (
-    <div className="card">
-      <div className="row between">
-        <button className="chip" onClick={() => move(-1)}>‹</button>
+    <div className="cal">
+      <div className="stepper">
+        <button className="step" onClick={() => move(-1)} aria-label="이전 달">‹</button>
         <b>{y}년 {m}월</b>
-        <button className="chip" onClick={() => move(1)}>›</button>
+        <button className="step" onClick={() => move(1)} aria-label="다음 달">›</button>
       </div>
       <div className="calendar">
         {['일', '월', '화', '수', '목', '금', '토'].map((d) => <div key={d} className="dow">{d}</div>)}

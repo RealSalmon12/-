@@ -15,7 +15,7 @@ export default function ClassAdmin() {
 
   useEffect(() => { load() }, [member.class_id])
 
-  if (!isTeacher) return <div className="page muted">선생님만 볼 수 있어요.</div>
+  if (!isTeacher) return <div className="page empty">선생님만 볼 수 있어요.</div>
 
   async function setRole(userId, role) {
     await supabase.from('members').update({ role }).eq('class_id', member.class_id).eq('user_id', userId)
@@ -35,35 +35,35 @@ export default function ClassAdmin() {
   }
 
   return (
-    <div className="page stack">
-      <button className="link back" onClick={() => navigate(-1)}>‹ 뒤로</button>
+    <div className="page">
+      <button className="back" onClick={() => navigate(-1)}>‹ 뒤로</button>
       <h1>반 관리</h1>
-      <section className="card stack-sm">
-        <span className="muted small">학생들에게 알려줄 초대 코드</span>
+      <section className="invite">
+        <span className="fine">학생들에게 알려줄 초대 코드</span>
         <span className="code">{member.classes.invite_code}</span>
-        <button className="link" onClick={resetCode}>코드 새로 만들기</button>
+        <button className="btn-text" onClick={resetCode}>코드 새로 만들기</button>
       </section>
-      <section className="card">
+      <section className="section">
         <h2>멤버 {members.length}명</h2>
-        <ul className="list">
+        <ul className="member-list">
           {members.map((m) => (
-            <li key={m.user_id} className="row between">
+            <li key={m.user_id}>
               <span>{m.display_name}</span>
-              {m.role === 'teacher' ? <span className="badge">{ROLE_NAMES.teacher}</span> : (
-                <span className="row gap">
+              {m.role === 'teacher' ? <span className="fine">{ROLE_NAMES.teacher}</span> : (
+                <span className="member-actions">
                   <select value={m.role} onChange={(e) => setRole(m.user_id, e.target.value)}>
                     <option value="student">학생</option>
                     <option value="president">반장</option>
                     <option value="vice">부반장</option>
                   </select>
-                  <button className="link danger-text" onClick={() => kick(m)}>내보내기</button>
+                  <button className="btn-text danger" onClick={() => kick(m)}>내보내기</button>
                 </span>
               )}
             </li>
           ))}
         </ul>
       </section>
-      <button className="link muted" onClick={() => supabase.auth.signOut()}>로그아웃</button>
+      <button className="btn-text quiet" onClick={() => supabase.auth.signOut()}>로그아웃</button>
     </div>
   )
 }

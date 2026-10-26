@@ -8,11 +8,15 @@ export default function Login() {
     })
 
   return (
-    <div className="center stack">
-      <img src="/icon.svg" alt="" width="88" height="88" />
-      <h1>학급정리기</h1>
-      <p className="muted">수행평가, 가정통신문, 급식을 한눈에</p>
-      <button className="primary big" onClick={signIn}>Google 계정으로 시작하기</button>
+    <div className="board">
+      <div className="board-inner">
+        <h1 className="board-title">학급정리기</h1>
+        <p className="board-sub">수행평가 마감, 가정통신문, 오늘 급식을<br />우리 반 친구들과 같이 봐요.</p>
+      </div>
+      <div className="board-ledge">
+        <button className="btn-chalk" onClick={signIn}>Google 계정으로 로그인</button>
+        <p className="board-note">단국대학교부속소프트웨어고등학교</p>
+      </div>
     </div>
   )
 }
