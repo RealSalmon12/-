@@ -45,7 +45,7 @@ export default function Home() {
     <div className="page">
       <header className="masthead">
         <div>
-          <p className="masthead-date">{formatDate(t)}</p>
+          <p className="masthead-date">{formatDate(t)}{member.classes.school_name && <span className="masthead-school">{member.classes.school_name}</span>}</p>
           <h1 className="masthead-class">{member.classes.name}</h1>
           <p className="masthead-me">{ROLE_NAMES[member.role]} {member.display_name}</p>
         </div>

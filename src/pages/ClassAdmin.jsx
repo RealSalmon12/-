@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase.js'
 import { useSession, ROLE_NAMES } from '../session.jsx'
+import SchoolPicker, { gradesFor } from '../components/SchoolPicker.jsx'
 
 export default function ClassAdmin() {
   const { member, isTeacher, reloadMember } = useSession()
@@ -10,6 +11,10 @@ export default function ClassAdmin() {
   const [grade, setGrade] = useState(member.classes.grade ?? '')
   const [classNo, setClassNo] = useState(member.classes.class_no ?? '')
   const [saved, setSaved] = useState('')
+  const c = member.classes
+  const [school, setSchool] = useState(
+    c.office_code ? { office: c.office_code, code: c.school_code ?? '', name: c.school_name, kind: c.school_kind } : null
+  )
 
   const load = () =>
     supabase.from('members').select('user_id, display_name, role')
@@ -33,10 +38,14 @@ export default function ClassAdmin() {
 
   async function saveClass(e) {
     e.preventDefault()
+    if (!school) return setSaved('학교를 먼저 찾아서 골라 주세요.')
     const { error } = await supabase.from('classes')
-      .update({ grade: Number(grade), class_no: Number(classNo), name: `${grade}학년 ${classNo}반` })
+      .update({
+        grade: Number(grade), class_no: Number(classNo), name: `${grade}학년 ${classNo}반`,
+        office_code: school.office, school_code: school.code || null, school_name: school.name, school_kind: school.kind
+      })
       .eq('id', member.class_id)
-    setSaved(error ? 'DB 업데이트(002_real_use.sql)를 먼저 실행해 주세요.' : '저장했어요.')
+    setSaved(error ? 'DB 업데이트(003_school_picker.sql)를 먼저 실행해 주세요.' : '저장했어요.')
     if (!error) reloadMember()
   }
 
@@ -56,13 +65,14 @@ export default function ClassAdmin() {
         <button className="btn-text" onClick={resetCode}>코드 새로 만들기</button>
       </section>
       <form className="section" onSubmit={saveClass}>
-        <h2>학년과 반</h2>
-        <p className="fine">시간표를 NEIS에서 불러올 때 써요.</p>
+        <h2>학교와 반</h2>
+        <p className="fine">급식, 시간표, 학교 일정을 NEIS에서 불러올 때 써요.</p>
+        <SchoolPicker value={school} onChange={setSchool} />
         <div className="field-row">
           <label>학년
             <select value={grade} onChange={(e) => setGrade(e.target.value)} required>
               <option value="" disabled>고르기</option>
-              {[1, 2, 3].map((g) => <option key={g} value={g}>{g}학년</option>)}
+              {gradesFor(school?.kind).map((g) => <option key={g} value={g}>{g}학년</option>)}
             </select>
           </label>
           <label>반

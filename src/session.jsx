@@ -25,9 +25,17 @@ export function SessionProvider({ children }) {
       .eq('user_id', user.id)
       .order('joined_at')
       .limit(1)
-    let { data, error } = await query('name, invite_code, grade, class_no')
-    // 2차 DB 업데이트(002_real_use.sql) 전이면 학년/반 칸이 없으니 빼고 다시 읽음
-    if (error) ({ data } = await query('name, invite_code'))
+    // DB 업데이트(002, 003)를 아직 안 했으면 없는 칸을 빼고 다시 읽음
+    const tries = [
+      'name, invite_code, grade, class_no, office_code, school_code, school_name, school_kind',
+      'name, invite_code, grade, class_no',
+      'name, invite_code'
+    ]
+    let data = null
+    for (const cols of tries) {
+      const res = await query(cols)
+      if (!res.error) { data = res.data; break }
+    }
     setMember(data?.[0] ?? null)
   }, [user])
 
