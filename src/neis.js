@@ -17,7 +17,9 @@ export function useNeis(type, params, enabled = true) {
         const body = await error.context?.json?.().catch(() => null)
         message = body?.error ?? '학교 정보를 불러오지 못했어요.'
       }
-      setState({ loading: false, data: Array.isArray(data) ? data : [], error: message })
+      // 함수가 아직 옛 버전이면 type 을 몰라 급식을 돌려주므로, 모양이 맞는 것만 씀
+      const valid = { meals: (r) => r.meal_type, timetable: (r) => r.period, schedule: (r) => r.name }[type]
+      setState({ loading: false, data: Array.isArray(data) ? data.filter(valid) : [], error: message })
     })
     return () => { alive = false }
   }, [type, key, enabled])
