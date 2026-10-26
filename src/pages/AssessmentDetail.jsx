@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../supabase.js'
 import { useSession } from '../session.jsx'
-import { formatDate, dday } from '../util.js'
+import { formatDate } from '../util.js'
+import { DueMark } from '../components/DueList.jsx'
 
 export default function AssessmentDetail() {
   const { id } = useParams()
@@ -20,24 +21,26 @@ export default function AssessmentDetail() {
     navigate('/assessments', { replace: true })
   }
 
-  if (!a) return <div className="page muted">불러오는 중…</div>
+  if (!a) return <div className="page" />
   return (
-    <div className="page stack">
-      <button className="link back" onClick={() => navigate(-1)}>‹ 뒤로</button>
-      <span className="subject">{a.subject}</span>
-      <h1>{a.title}</h1>
-      <p className="row gap"><span className="badge">{dday(a.due_date)}</span> {formatDate(a.due_date)}</p>
-      {a.content && <section className="card pre">{a.content}</section>}
+    <div className="page">
+      <button className="back" onClick={() => navigate(-1)}>‹ 뒤로</button>
+      <header className="detail-head">
+        <p className="due-subject">{a.subject}</p>
+        <h1>{a.title}</h1>
+        <p className="detail-due"><DueMark date={a.due_date} /> {formatDate(a.due_date)}</p>
+      </header>
+      {a.content && <p className="prose">{a.content}</p>}
       {a.materials && (
-        <section className="card">
+        <section className="section">
           <h2>준비물</h2>
-          <p className="pre">{a.materials}</p>
+          <p className="prose">{a.materials}</p>
         </section>
       )}
       {canPost && (
-        <div className="row gap">
-          <Link className="button" to={`/assessments/${id}/edit`}>수정</Link>
-          <button className="danger" onClick={remove}>삭제</button>
+        <div className="actions">
+          <Link className="btn-quiet" to={`/assessments/${id}/edit`}>수정</Link>
+          <button className="btn-danger" onClick={remove}>삭제</button>
         </div>
       )}
     </div>

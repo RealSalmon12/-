@@ -38,3 +38,14 @@ export function parseDish(dish) {
   const m = dish.match(/^(.*?)\s*\(([\d.]+)\)\s*$/)
   return m ? { name: m[1], allergies: m[2].replace(/\.$/, '') } : { name: dish, allergies: '' }
 }
+
+// 남은 날짜를 숫자로 (오늘 0, 내일 1, 지난 날은 음수)
+export function daysLeft(iso) {
+  return Math.round((new Date(iso) - new Date(today())) / 86400000)
+}
+
+// '10.27 화' 처럼 짧은 날짜
+export function shortDate(iso) {
+  const d = new Date(iso + 'T00:00:00Z')
+  return `${d.getUTCMonth() + 1}.${d.getUTCDate()} ${WEEKDAYS[d.getUTCDay()]}`
+}

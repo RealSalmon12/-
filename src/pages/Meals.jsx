@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabase.js'
-import { today, addDays, formatDate, parseDish } from '../util.js'
+import { today, addDays, formatDate } from '../util.js'
+import Tray from '../components/Tray.jsx'
 
 const ORDER = { 조식: 0, 중식: 1, 석식: 2 }
 
@@ -16,43 +17,39 @@ export function useMeals(from, to) {
   return state
 }
 
-export function MealCard({ meal, compact }) {
-  return (
-    <div className="meal">
-      <div className="row between">
-        <b>{meal.meal_type}</b>
-        {meal.calories && <span className="muted small">{meal.calories}</span>}
-      </div>
-      <ul className={compact ? 'dishes inline' : 'dishes'}>
-        {meal.dishes.map((d) => {
-          const { name, allergies } = parseDish(d)
-          return <li key={d}>{name}{!compact && allergies && <sup className="muted">{allergies}</sup>}</li>
-        })}
-      </ul>
-    </div>
-  )
-}
-
 export default function Meals() {
   const [date, setDate] = useState(today())
   const { loading, list, error } = useMeals(date, date)
 
   return (
-    <div className="page stack">
-      <h1>급식</h1>
-      <div className="row between card">
-        <button className="chip" onClick={() => setDate(addDays(date, -1))}>‹</button>
-        <button className="link" onClick={() => setDate(today())}>{formatDate(date)}</button>
-        <button className="chip" onClick={() => setDate(addDays(date, 1))}>›</button>
+    <div className="page">
+      <header className="page-head">
+        <h1>급식</h1>
+      </header>
+      <div className="stepper">
+        <button className="step" onClick={() => setDate(addDays(date, -1))} aria-label="전날">‹</button>
+        <button className="btn-text" onClick={() => setDate(today())}>
+          {formatDate(date)}{date === today() && ' 오늘'}
+        </button>
+        <button className="step" onClick={() => setDate(addDays(date, 1))} aria-label="다음날">›</button>
       </div>
-      {loading ? <p className="muted">불러오는 중…</p>
-        : error ? <p className="error">{error}</p>
-        : list.length ? list.map((m) => <section key={m.meal_type} className="card"><MealCard meal={m} /></section>)
-        : <p className="muted">이 날은 급식이 없어요</p>}
-      <p className="muted small">
-        알레르기: 1 난류 2 우유 3 메밀 4 땅콩 5 대두 6 밀 7 고등어 8 게 9 새우 10 돼지고기 11 복숭아
-        12 토마토 13 아황산류 14 호두 15 닭고기 16 쇠고기 17 오징어 18 조개류 19 잣
-      </p>
+      {loading ? <div className="tray tray-ghost" />
+        : error ? <p className="error">{error} 잠시 뒤 다시 열어 주세요.</p>
+        : list.length ? list.map((m) => (
+          <section key={m.meal_type} className="section">
+            <div className="section-head">
+              <h2>{m.meal_type}</h2>
+              {m.calories && <span className="fine">{m.calories.replace(' Kcal', ' kcal')}</span>}
+            </div>
+            <Tray dishes={m.dishes} showAllergies />
+          </section>
+        ))
+        : <p className="empty">이 날은 급식이 없어요.</p>}
+      <details className="legend">
+        <summary>알레르기 번호 보기</summary>
+        <p>1 난류, 2 우유, 3 메밀, 4 땅콩, 5 대두, 6 밀, 7 고등어, 8 게, 9 새우, 10 돼지고기, 11 복숭아,
+          12 토마토, 13 아황산류, 14 호두, 15 닭고기, 16 쇠고기, 17 오징어, 18 조개류, 19 잣</p>
+      </details>
     </div>
   )
 }

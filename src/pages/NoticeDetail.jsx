@@ -27,25 +27,26 @@ export default function NoticeDetail() {
     navigate('/notices', { replace: true })
   }
 
-  if (!n) return <div className="page muted">불러오는 중…</div>
+  if (!n) return <div className="page" />
   return (
-    <div className="page stack">
-      <button className="link back" onClick={() => navigate(-1)}>‹ 뒤로</button>
-      <h1>{n.title}</h1>
-      <p className="muted small">
-        {formatDate(n.created_at.slice(0, 10))}{n.due_date && ` · 제출 마감 ${formatDate(n.due_date)}`}
-      </p>
-      {n.memo && <p className="pre">{n.memo}</p>}
+    <div className="page">
+      <button className="back" onClick={() => navigate(-1)}>‹ 뒤로</button>
+      <header className="detail-head">
+        <h1>{n.title}</h1>
+        <p className="fine">{formatDate(n.created_at.slice(0, 10))}에 올림</p>
+        {n.due_date && <p className="deadline">{formatDate(n.due_date)}까지 제출</p>}
+      </header>
+      {n.memo && <p className="prose">{n.memo}</p>}
       <div className="photos">
         {urls.map((u, i) => (
           <img key={u} src={u} alt={`통신문 ${i + 1}쪽`} onClick={() => setZoom(u)} />
         ))}
       </div>
-      {canPost && <button className="danger" onClick={remove}>삭제</button>}
+      {canPost && <button className="btn-danger" onClick={remove}>삭제</button>}
       {zoom && (
         <div className="viewer" onClick={() => setZoom(null)}>
           <img src={zoom} alt="" />
-          <a className="chip" href={zoom} download onClick={(e) => e.stopPropagation()}>저장</a>
+          <a className="btn-chalk" href={zoom} download onClick={(e) => e.stopPropagation()}>저장</a>
         </div>
       )}
     </div>

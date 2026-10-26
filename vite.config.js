@@ -13,8 +13,8 @@ export default defineConfig({
         short_name: '학급정리기',
         description: '수행평가, 가정통신문, 급식을 한눈에',
         lang: 'ko',
-        theme_color: '#2f6fed',
-        background_color: '#ffffff',
+        theme_color: '#1e4a3b',
+        background_color: '#f3f6f1',
         display: 'standalone',
         start_url: '/',
         icons: [

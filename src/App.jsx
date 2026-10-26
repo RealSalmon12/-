@@ -11,19 +11,20 @@ import NoticeDetail from './pages/NoticeDetail.jsx'
 import NoticeForm from './pages/NoticeForm.jsx'
 import Meals from './pages/Meals.jsx'
 import ClassAdmin from './pages/ClassAdmin.jsx'
+import { HomeIcon, PencilIcon, PaperIcon, TrayIcon } from './components/Icons.jsx'
 
 const TABS = [
-  { to: '/', label: '홈', icon: '🏠' },
-  { to: '/assessments', label: '수행평가', icon: '📝' },
-  { to: '/notices', label: '통신문', icon: '📄' },
-  { to: '/meals', label: '급식', icon: '🍚' }
+  { to: '/', label: '홈', Icon: HomeIcon },
+  { to: '/assessments', label: '수행평가', Icon: PencilIcon },
+  { to: '/notices', label: '통신문', Icon: PaperIcon },
+  { to: '/meals', label: '급식', Icon: TrayIcon }
 ]
 
 export default function App() {
   const { user, member } = useSession()
 
   if (user === undefined || (user && member === undefined)) {
-    return <div className="center muted">불러오는 중…</div>
+    return <div className="splash" aria-label="불러오는 중" />
   }
   if (!user) return <Login />
   if (!member) return <Join />
@@ -48,7 +49,7 @@ export default function App() {
       <nav className="tabbar">
         {TABS.map((t) => (
           <NavLink key={t.to} to={t.to} end={t.to === '/'}>
-            <span aria-hidden>{t.icon}</span>
+            <t.Icon />
             {t.label}
           </NavLink>
         ))}

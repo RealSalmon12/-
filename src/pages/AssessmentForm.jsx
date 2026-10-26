@@ -20,7 +20,7 @@ export default function AssessmentForm() {
       .eq('id', id).single().then(({ data }) => data && setForm(data))
   }, [id])
 
-  if (!canPost) return <div className="page muted">선생님, 반장, 부반장만 쓸 수 있어요.</div>
+  if (!canPost) return <div className="page empty">선생님, 반장, 부반장만 쓸 수 있어요.</div>
 
   const set = (key) => (e) => setForm({ ...form, [key]: e.target.value })
 
@@ -36,8 +36,8 @@ export default function AssessmentForm() {
   }
 
   return (
-    <form className="page stack" onSubmit={submit}>
-      <button type="button" className="link back" onClick={() => navigate(-1)}>‹ 취소</button>
+    <form className="page form" onSubmit={submit}>
+      <button type="button" className="back" onClick={() => navigate(-1)}>‹ 취소</button>
       <h1>{id ? '수행평가 수정' : '수행평가 쓰기'}</h1>
       <label>과목<input value={form.subject} onChange={set('subject')} placeholder="예: 국어" required /></label>
       <label>날짜<input type="date" value={form.due_date} onChange={set('due_date')} required /></label>
@@ -45,7 +45,7 @@ export default function AssessmentForm() {
       <label>내용<textarea rows={6} value={form.content} onChange={set('content')} /></label>
       <label>준비물 (선택)<textarea rows={2} value={form.materials} onChange={set('materials')} /></label>
       {error && <p className="error">{error}</p>}
-      <button className="primary big" disabled={busy}>저장</button>
+      <button className="btn-primary" disabled={busy}>저장</button>
     </form>
   )
 }

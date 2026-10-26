@@ -14,7 +14,7 @@ export default function NoticeForm() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
-  if (!canPost) return <div className="page muted">선생님, 반장, 부반장만 올릴 수 있어요.</div>
+  if (!canPost) return <div className="page empty">선생님, 반장, 부반장만 올릴 수 있어요.</div>
 
   const addFiles = (e) => setFiles([...files, ...e.target.files])
 
@@ -43,20 +43,21 @@ export default function NoticeForm() {
   }
 
   return (
-    <form className="page stack" onSubmit={submit}>
-      <button type="button" className="link back" onClick={() => navigate(-1)}>‹ 취소</button>
+    <form className="page form" onSubmit={submit}>
+      <button type="button" className="back" onClick={() => navigate(-1)}>‹ 취소</button>
       <h1>통신문 올리기</h1>
       <label>제목<input value={title} onChange={(e) => setTitle(e.target.value)} required /></label>
-      <label className="button">
-        📷 사진 찍기 / 고르기
-        <input type="file" accept="image/*" multiple hidden onChange={addFiles} />
+      <label className="picker">
+        사진 찍기 또는 고르기
+        <span className="fine">여러 장을 한 번에 골라도 돼요</span>
+        <input className="sr-only" type="file" accept="image/*" multiple onChange={addFiles} />
       </label>
       {files.length > 0 && (
-        <div className="photos small">
+        <div className="previews">
           {files.map((f, i) => (
             <div key={i} className="preview">
               <img src={URL.createObjectURL(f)} alt="" />
-              <button type="button" onClick={() => setFiles(files.filter((_, j) => j !== i))}>✕</button>
+              <button type="button" aria-label={`${i + 1}번째 사진 빼기`} onClick={() => setFiles(files.filter((_, j) => j !== i))}>✕</button>
             </div>
           ))}
         </div>
@@ -64,7 +65,7 @@ export default function NoticeForm() {
       <label>메모 (선택)<textarea rows={3} value={memo} onChange={(e) => setMemo(e.target.value)} /></label>
       <label>제출 마감일 (선택)<input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} /></label>
       {error && <p className="error">{error}</p>}
-      <button className="primary big" disabled={busy}>{busy ? '올리는 중…' : '올리기'}</button>
+      <button className="btn-primary" disabled={busy}>{busy ? '올리는 중…' : '올리기'}</button>
     </form>
   )
 }
