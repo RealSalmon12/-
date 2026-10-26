@@ -34,9 +34,23 @@ export async function compressImage(file, maxSide = 1600, quality = 0.8) {
 }
 
 // "닭갈비 (1.5.6.)" -> { name: '닭갈비', allergies: '1.5.6' }
+// 학교마다 붙이는 표시 기호(★ 학교 표시, # 수제, * 등)
+const MARKS = /[★☆*#@※♥♡◆◇●○■□▲△▶◎♣♠♧♤]/g
+
+// '팽이버섯장국★ (5.6.13.)' 같은 NEIS 메뉴 이름에서 기호와 알레르기 번호를 떼어 냄
 export function parseDish(dish) {
-  const m = dish.match(/^(.*?)\s*\(([\d.]+)\)\s*$/)
-  return m ? { name: m[1], allergies: m[2].replace(/\.$/, '') } : { name: dish, allergies: '' }
+  let name = dish
+  let allergies = ''
+  const take = (re) => {
+    const m = name.match(re)
+    if (!m) return
+    allergies = m[1].replace(/\s/g, '').replace(/\.$/, '')
+    name = name.replace(re, '')
+  }
+  take(/\s*\(([\d.\s]+)\)\s*/)
+  if (!allergies) take(/(?<=\D)\s*(\d{1,2}(?:\.\d{1,2})*\.)\s*$/)
+  name = name.replace(MARKS, '').replace(/\s+/g, ' ').trim()
+  return { name: name || dish.trim(), allergies }
 }
 
 // 남은 날짜를 숫자로 (오늘 0, 내일 1, 지난 날은 음수)
