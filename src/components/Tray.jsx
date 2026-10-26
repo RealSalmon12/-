@@ -39,18 +39,18 @@ export default function Tray({ dishes, showAllergies = false }) {
             <div key={i} className="well" role="listitem"><Dish dish={d} showAllergies={showAllergies} /></div>
           ))}
         </div>
-        <div className="tray-row tray-main">
+        <div className={desserts.length ? 'tray-row tray-main has-dessert' : 'tray-row tray-main'}>
           <div className="well well-rice" role="listitem"><Dish dish={rice} showAllergies={showAllergies} /></div>
           <div className="well well-soup" role="listitem"><Dish dish={soup} showAllergies={showAllergies} /></div>
+          {desserts.length > 0 && (
+            <div className="tray-desserts">
+              {desserts.map((d, i) => (
+                <div key={i} className="well well-dessert" role="listitem"><Dish dish={d} showAllergies={showAllergies} /></div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
-      {desserts.length > 0 && (
-        <p className="tray-extra">
-          후식 {desserts.map((d) => d.name).join(', ')}
-          {showAllergies && desserts.some((d) => d.allergies) &&
-            <span className="dish-allergy"> {desserts.map((d) => d.allergies).filter(Boolean).join(' / ')}</span>}
-        </p>
-      )}
     </div>
   )
 }
