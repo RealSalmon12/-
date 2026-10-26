@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase.js'
 import { useSession, ROLE_NAMES } from '../session.jsx'
 import SchoolPicker, { gradesFor } from '../components/SchoolPicker.jsx'
@@ -104,7 +104,7 @@ export default function ClassAdmin() {
           ))}
         </ul>
       </section>
-      <button className="btn-text quiet" onClick={() => supabase.auth.signOut()}>로그아웃</button>
+      <Link className="btn-text quiet" to="/account">내 계정 · 로그아웃 · 계정 초기화</Link>
     </div>
   )
 }

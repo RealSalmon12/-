@@ -14,7 +14,7 @@
 
 1. [supabase.com](https://supabase.com) 에서 새 프로젝트를 만듭니다.
 2. **SQL Editor** 에 [`supabase/schema.sql`](supabase/schema.sql) 내용을 통째로 붙여넣고 실행합니다.
-   이어서 [`002_real_use.sql`](supabase/migrations/002_real_use.sql), [`003_school_picker.sql`](supabase/migrations/003_school_picker.sql) 도 순서대로 한 번씩 실행합니다.
+   이어서 [`002_real_use.sql`](supabase/migrations/002_real_use.sql), [`003_school_picker.sql`](supabase/migrations/003_school_picker.sql), [`004_account_reset.sql`](supabase/migrations/004_account_reset.sql) 도 순서대로 한 번씩 실행합니다.
 3. **Authentication > Providers > Google** 을 켭니다. (Google Cloud Console 에서 OAuth 클라이언트 ID 를 만들어 넣어야 해요.)
 4. **Authentication > URL Configuration** 의 Site URL 에 배포 주소(예: `https://학급정리기.vercel.app`)를 넣습니다.
 

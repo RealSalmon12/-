@@ -12,6 +12,7 @@ import NoticeForm from './pages/NoticeForm.jsx'
 import Meals from './pages/Meals.jsx'
 import ClassAdmin from './pages/ClassAdmin.jsx'
 import Timetable from './pages/Timetable.jsx'
+import Account from './pages/Account.jsx'
 import { HomeIcon, PencilIcon, PaperIcon, TrayIcon, GridIcon } from './components/Icons.jsx'
 
 const TABS = [
@@ -46,6 +47,7 @@ export default function App() {
           <Route path="/timetable" element={<Timetable />} />
           <Route path="/meals" element={<Meals />} />
           <Route path="/class" element={<ClassAdmin />} />
+          <Route path="/account" element={<Account />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
