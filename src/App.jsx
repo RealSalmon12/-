@@ -1,0 +1,58 @@
+import { NavLink, Navigate, Route, Routes } from 'react-router-dom'
+import { useSession } from './session.jsx'
+import Login from './pages/Login.jsx'
+import Join from './pages/Join.jsx'
+import Home from './pages/Home.jsx'
+import Assessments from './pages/Assessments.jsx'
+import AssessmentDetail from './pages/AssessmentDetail.jsx'
+import AssessmentForm from './pages/AssessmentForm.jsx'
+import Notices from './pages/Notices.jsx'
+import NoticeDetail from './pages/NoticeDetail.jsx'
+import NoticeForm from './pages/NoticeForm.jsx'
+import Meals from './pages/Meals.jsx'
+import ClassAdmin from './pages/ClassAdmin.jsx'
+
+const TABS = [
+  { to: '/', label: '홈', icon: '🏠' },
+  { to: '/assessments', label: '수행평가', icon: '📝' },
+  { to: '/notices', label: '통신문', icon: '📄' },
+  { to: '/meals', label: '급식', icon: '🍚' }
+]
+
+export default function App() {
+  const { user, member } = useSession()
+
+  if (user === undefined || (user && member === undefined)) {
+    return <div className="center muted">불러오는 중…</div>
+  }
+  if (!user) return <Login />
+  if (!member) return <Join />
+
+  return (
+    <div className="app">
+      <main>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/assessments" element={<Assessments />} />
+          <Route path="/assessments/new" element={<AssessmentForm />} />
+          <Route path="/assessments/:id" element={<AssessmentDetail />} />
+          <Route path="/assessments/:id/edit" element={<AssessmentForm />} />
+          <Route path="/notices" element={<Notices />} />
+          <Route path="/notices/new" element={<NoticeForm />} />
+          <Route path="/notices/:id" element={<NoticeDetail />} />
+          <Route path="/meals" element={<Meals />} />
+          <Route path="/class" element={<ClassAdmin />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </main>
+      <nav className="tabbar">
+        {TABS.map((t) => (
+          <NavLink key={t.to} to={t.to} end={t.to === '/'}>
+            <span aria-hidden>{t.icon}</span>
+            {t.label}
+          </NavLink>
+        ))}
+      </nav>
+    </div>
+  )
+}
