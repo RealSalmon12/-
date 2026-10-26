@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { supabase } from '../supabase.js'
 import { useSession } from '../session.jsx'
+import SchoolPicker, { gradesFor } from '../components/SchoolPicker.jsx'
 
 export default function Join() {
   const { user, reloadMember } = useSession()
   const [name, setName] = useState(user.user_metadata?.full_name ?? '')
   const [code, setCode] = useState('')
+  const [school, setSchool] = useState(null)
   const [grade, setGrade] = useState('')
   const [classNo, setClassNo] = useState('')
   const [teacherMode, setTeacherMode] = useState(false)
@@ -14,15 +16,19 @@ export default function Join() {
 
   async function submit(e) {
     e.preventDefault()
+    if (teacherMode && !school) return setError('학교를 먼저 찾아서 골라 주세요.')
     setBusy(true)
     setError('')
     const { error } = teacherMode
-      ? await supabase.rpc('create_class', { class_grade: Number(grade), class_number: Number(classNo), my_name: name.trim() })
+      ? await supabase.rpc('create_class', {
+        class_grade: Number(grade), class_number: Number(classNo), my_name: name.trim(),
+        office: school.office, school: school.code, school_title: school.name, kind: school.kind
+      })
       : await supabase.rpc('join_class', { code, my_name: name.trim() })
     setBusy(false)
     if (error) {
       return setError(/create_class|function/.test(error.message)
-        ? 'DB 업데이트가 아직 안 됐어요. Supabase에서 002_real_use.sql 을 실행해 주세요.'
+        ? 'DB 업데이트가 아직 안 됐어요. Supabase에서 003_school_picker.sql 을 실행해 주세요.'
         : error.message)
     }
     reloadMember()
@@ -36,12 +42,14 @@ export default function Join() {
         <input value={name} onChange={(e) => setName(e.target.value)} required />
       </label>
       {teacherMode ? (
+        <>
+        <SchoolPicker value={school} onChange={setSchool} />
         <div className="field-row">
           <label>
             학년
             <select value={grade} onChange={(e) => setGrade(e.target.value)} required>
               <option value="" disabled>고르기</option>
-              {[1, 2, 3].map((g) => <option key={g} value={g}>{g}학년</option>)}
+              {gradesFor(school?.kind).map((g) => <option key={g} value={g}>{g}학년</option>)}
             </select>
           </label>
           <label>
@@ -50,6 +58,7 @@ export default function Join() {
               onChange={(e) => setClassNo(e.target.value)} placeholder="예: 3" required />
           </label>
         </div>
+        </>
       ) : (
         <label>
           초대 코드 (선생님께 받은 6자리)

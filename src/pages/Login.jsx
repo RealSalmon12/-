@@ -15,7 +15,7 @@ export default function Login() {
       </div>
       <div className="board-ledge">
         <button className="btn-chalk" onClick={signIn}>Google 계정으로 로그인</button>
-        <p className="board-note">단국대학교부속소프트웨어고등학교</p>
+        <p className="board-note">우리 학교 급식과 시간표는 NEIS에서 자동으로 불러와요</p>
       </div>
     </div>
   )
