@@ -51,7 +51,7 @@ export default function Home() {
         </div>
         {isTeacher
           ? <Link className="btn-quiet" to="/class">반 관리</Link>
-          : <button className="btn-quiet" onClick={() => supabase.auth.signOut()}>로그아웃</button>}
+          : <Link className="btn-quiet" to="/account">내 계정</Link>}
       </header>
 
       {timetable.data.length > 0 && (

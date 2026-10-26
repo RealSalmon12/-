@@ -86,10 +86,14 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .btn-text { border: none; background: none; padding: 6px 0; color: var(--board); font-weight: 500; }
 .btn-text.quiet { color: var(--ink-soft); font-weight: 400; }
 .btn-text.danger { color: var(--redpen); }
+.self-start { align-self: flex-start; }
+.danger-zone { margin-top: 12px; padding-top: 20px; border-top: 1px solid var(--rule); }
+.danger-zone h2 { color: var(--redpen); }
 .btn-danger {
   align-self: flex-start; min-height: 40px; padding: 0 16px; border-radius: 10px;
   border: 1px solid currentColor; background: none; color: var(--redpen);
 }
+.btn-danger:disabled { opacity: 0.45; }
 .back { align-self: flex-start; border: none; background: none; padding: 4px 0; color: var(--ink-soft); margin-bottom: -12px; }
 .more { color: var(--board); font-size: 14px; font-weight: 500; }
 .actions { display: flex; gap: 10px; }
