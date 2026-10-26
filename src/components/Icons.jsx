@@ -13,6 +13,9 @@ export const PaperIcon = () => (
 export const TrayIcon = () => (
   <svg {...base}><rect x="3" y="5" width="18" height="14" rx="3" /><path d="M3 11h18M10 11v8M9 5v6M15 5v6" /></svg>
 )
+export const GridIcon = () => (
+  <svg {...base}><rect x="4" y="4" width="16" height="16" rx="2" /><path d="M4 9.5h16M4 15h16M10 4v16" /></svg>
+)
 export const PlusIcon = () => (
   <svg {...base} width="20" height="20"><path d="M12 5v14M5 12h14" /></svg>
 )

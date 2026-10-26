@@ -5,7 +5,8 @@
 
 - 선생님, 반장, 부반장: 수행평가와 가정통신문을 쓰고 고치고 지울 수 있음
 - 학생: 모든 내용을 볼 수 있음
-- 급식: 단국대학교부속소프트웨어고등학교 급식을 NEIS 에서 자동으로 불러옴
+- 급식, 시간표, 학사일정: 단국대학교부속소프트웨어고등학교 정보를 NEIS 에서 자동으로 불러옴
+- 수행평가마다 "다 했어요" 체크, 휴대폰 캘린더로 내보내기
 
 ## 처음 설정하기
 
@@ -13,6 +14,7 @@
 
 1. [supabase.com](https://supabase.com) 에서 새 프로젝트를 만듭니다.
 2. **SQL Editor** 에 [`supabase/schema.sql`](supabase/schema.sql) 내용을 통째로 붙여넣고 실행합니다.
+   이어서 [`supabase/migrations/002_real_use.sql`](supabase/migrations/002_real_use.sql) 도 같은 방법으로 한 번 실행합니다.
 3. **Authentication > Providers > Google** 을 켭니다. (Google Cloud Console 에서 OAuth 클라이언트 ID 를 만들어 넣어야 해요.)
 4. **Authentication > URL Configuration** 의 Site URL 에 배포 주소(예: `https://학급정리기.vercel.app`)를 넣습니다.
 
@@ -28,6 +30,7 @@ supabase functions deploy meals
 ```
 
 학교 코드(`NEIS_SCHOOL_CODE`)는 넣지 않으면 학교 이름으로 자동으로 찾아요.
+대시보드에서 올린다면 **Edge Functions → meals → Code** 에 [`index.ts`](supabase/functions/meals/index.ts) 를 붙여넣고 Deploy 하면 돼요. 이 함수 하나가 급식, 시간표, 학사일정을 모두 처리해요.
 
 ### 3. 배포 (Vercel, 무료)
 

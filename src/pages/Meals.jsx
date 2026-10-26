@@ -1,20 +1,14 @@
-import { useEffect, useState } from 'react'
-import { supabase } from '../supabase.js'
+import { useState } from 'react'
+import { useNeis } from '../neis.js'
 import { today, addDays, formatDate } from '../util.js'
 import Tray from '../components/Tray.jsx'
 
 const ORDER = { 조식: 0, 중식: 1, 석식: 2 }
 
 export function useMeals(from, to) {
-  const [state, setState] = useState({ loading: true, list: [], error: '' })
-  useEffect(() => {
-    setState((s) => ({ ...s, loading: true }))
-    supabase.functions.invoke('meals', { body: { from, to } }).then(({ data, error }) => {
-      const list = Array.isArray(data) ? [...data].sort((a, b) => ORDER[a.meal_type] - ORDER[b.meal_type]) : []
-      setState({ loading: false, list, error: error ? '급식을 불러오지 못했어요' : '' })
-    })
-  }, [from, to])
-  return state
+  const { loading, data, error } = useNeis('meals', { from, to })
+  const list = [...data].sort((a, b) => ORDER[a.meal_type] - ORDER[b.meal_type])
+  return { loading, list, error: error && '급식을 불러오지 못했어요.' }
 }
 
 export default function Meals() {

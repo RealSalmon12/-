@@ -49,3 +49,12 @@ export function shortDate(iso) {
   const d = new Date(iso + 'T00:00:00Z')
   return `${d.getUTCMonth() + 1}.${d.getUTCDate()} ${WEEKDAYS[d.getUTCDay()]}`
 }
+
+// 그 주 월요일 'YYYY-MM-DD'
+export function mondayOf(iso) {
+  const d = new Date(iso + 'T00:00:00Z')
+  const back = (d.getUTCDay() + 6) % 7
+  return addDays(iso, -back)
+}
+
+export const KINDS = ['발표', '서술형', '실기', '보고서·제출', '프로젝트', '토론', '기타']

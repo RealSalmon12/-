@@ -7,6 +7,9 @@ export default function ClassAdmin() {
   const { member, isTeacher, reloadMember } = useSession()
   const navigate = useNavigate()
   const [members, setMembers] = useState([])
+  const [grade, setGrade] = useState(member.classes.grade ?? '')
+  const [classNo, setClassNo] = useState(member.classes.class_no ?? '')
+  const [saved, setSaved] = useState('')
 
   const load = () =>
     supabase.from('members').select('user_id, display_name, role')
@@ -28,6 +31,15 @@ export default function ClassAdmin() {
     load()
   }
 
+  async function saveClass(e) {
+    e.preventDefault()
+    const { error } = await supabase.from('classes')
+      .update({ grade: Number(grade), class_no: Number(classNo), name: `${grade}학년 ${classNo}반` })
+      .eq('id', member.class_id)
+    setSaved(error ? 'DB 업데이트(002_real_use.sql)를 먼저 실행해 주세요.' : '저장했어요.')
+    if (!error) reloadMember()
+  }
+
   async function resetCode() {
     if (!confirm('초대 코드를 새로 만들면 예전 코드는 못 써요. 계속할까요?')) return
     await supabase.rpc('reset_invite_code', { cid: member.class_id })
@@ -43,6 +55,25 @@ export default function ClassAdmin() {
         <span className="code">{member.classes.invite_code}</span>
         <button className="btn-text" onClick={resetCode}>코드 새로 만들기</button>
       </section>
+      <form className="section" onSubmit={saveClass}>
+        <h2>학년과 반</h2>
+        <p className="fine">시간표를 NEIS에서 불러올 때 써요.</p>
+        <div className="field-row">
+          <label>학년
+            <select value={grade} onChange={(e) => setGrade(e.target.value)} required>
+              <option value="" disabled>고르기</option>
+              {[1, 2, 3].map((g) => <option key={g} value={g}>{g}학년</option>)}
+            </select>
+          </label>
+          <label>반
+            <input type="number" inputMode="numeric" min="1" max="20" value={classNo} onChange={(e) => setClassNo(e.target.value)} required />
+          </label>
+        </div>
+        <div className="actions">
+          <button className="btn-quiet">저장</button>
+          {saved && <span className="fine" role="status">{saved}</span>}
+        </div>
+      </form>
       <section className="section">
         <h2>멤버 {members.length}명</h2>
         <ul className="member-list">
