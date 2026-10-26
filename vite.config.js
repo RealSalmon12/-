@@ -7,6 +7,8 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      // 개인정보처리방침은 앱 화면이 아니라 그 파일 그대로 보여야 함
+      workbox: { navigateFallbackDenylist: [/^\/privacy/] },
       includeAssets: ['icon.svg'],
       manifest: {
         name: '학급정리기',
