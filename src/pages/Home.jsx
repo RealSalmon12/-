@@ -2,10 +2,14 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../supabase.js'
 import { useSession, ROLE_NAMES } from '../session.jsx'
-import { today, formatDate } from '../util.js'
+import { today, formatDate, addDays } from '../util.js'
 import { useMeals } from './Meals.jsx'
 import Tray from '../components/Tray.jsx'
 import DueList from '../components/DueList.jsx'
+import InstallHint from '../components/InstallHint.jsx'
+import { useDone } from '../done.js'
+import { useNeis } from '../neis.js'
+import { useTimetable } from './Timetable.jsx'
 
 // 오후 1시 반이 지나면 석식부터 보여줌
 const defaultMeal = (list) => {
@@ -22,10 +26,15 @@ export default function Home() {
   const t = today()
   const meals = useMeals(t, t)
   const shown = meals.list.find((m) => m.meal_type === (mealType ?? defaultMeal(meals.list)))
+  const { done, toggle } = useDone()
+  const timetable = useTimetable(t, t)
+  const school = useNeis('schedule', { from: t, to: addDays(t, 30) })
+  // 끝낸 건 빼고 가까운 순서로 4개
+  const soon = assessments.filter((a) => !done.has(a.id)).slice(0, 4)
 
   useEffect(() => {
-    supabase.from('assessments').select('id, subject, title, due_date')
-      .eq('class_id', member.class_id).gte('due_date', t).order('due_date').limit(4)
+    supabase.from('assessments').select('*')
+      .eq('class_id', member.class_id).gte('due_date', t).order('due_date').order('subject').limit(20)
       .then(({ data }) => setAssessments(data ?? []))
     supabase.from('notices').select('id, title, created_at, due_date')
       .eq('class_id', member.class_id).order('created_at', { ascending: false }).limit(3)
@@ -44,6 +53,14 @@ export default function Home() {
           ? <Link className="btn-quiet" to="/class">반 관리</Link>
           : <button className="btn-quiet" onClick={() => supabase.auth.signOut()}>로그아웃</button>}
       </header>
+
+      {timetable.data.length > 0 && (
+        <Link to="/timetable" className="today-strip" aria-label="오늘 시간표, 눌러서 이번 주 보기">
+          {[...timetable.data].sort((a, b) => a.period - b.period).map((r) => (
+            <span key={r.period}><b>{r.period}</b>{r.subject}</span>
+          ))}
+        </Link>
+      )}
 
       <section className="section">
         <div className="section-head">
@@ -74,10 +91,24 @@ export default function Home() {
           <h2>곧 마감</h2>
           <Link className="more" to="/assessments">전체 보기</Link>
         </div>
-        {assessments.length
-          ? <DueList items={assessments} />
-          : <p className="empty">다가오는 수행평가가 없어요.</p>}
+        {soon.length
+          ? <DueList items={soon} done={done} onToggle={toggle} />
+          : <p className="empty">{assessments.length ? '다가오는 수행평가를 다 끝냈어요.' : '다가오는 수행평가가 없어요.'}</p>}
       </section>
+
+      {school.data.length > 0 && (
+        <section className="section">
+          <h2>학교 일정</h2>
+          <ul className="plain-list">
+            {school.data.slice(0, 3).map((e) => (
+              <li key={e.date + e.name} className="plain-row">
+                <span>{e.name}</span>
+                <span className="fine">{formatDate(e.date)}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className="section">
         <div className="section-head">
@@ -97,6 +128,8 @@ export default function Home() {
           </ul>
         ) : <p className="empty">아직 올라온 통신문이 없어요.</p>}
       </section>
+
+      <InstallHint />
     </div>
   )
 }

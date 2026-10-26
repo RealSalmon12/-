@@ -6,7 +6,8 @@ export default function Join() {
   const { user, reloadMember } = useSession()
   const [name, setName] = useState(user.user_metadata?.full_name ?? '')
   const [code, setCode] = useState('')
-  const [className, setClassName] = useState('')
+  const [grade, setGrade] = useState('')
+  const [classNo, setClassNo] = useState('')
   const [teacherMode, setTeacherMode] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -16,10 +17,14 @@ export default function Join() {
     setBusy(true)
     setError('')
     const { error } = teacherMode
-      ? await supabase.rpc('create_class', { class_name: className.trim(), my_name: name.trim() })
+      ? await supabase.rpc('create_class', { class_grade: Number(grade), class_number: Number(classNo), my_name: name.trim() })
       : await supabase.rpc('join_class', { code, my_name: name.trim() })
     setBusy(false)
-    if (error) return setError(error.message)
+    if (error) {
+      return setError(/create_class|function/.test(error.message)
+        ? 'DB 업데이트가 아직 안 됐어요. Supabase에서 002_real_use.sql 을 실행해 주세요.'
+        : error.message)
+    }
     reloadMember()
   }
 
@@ -31,11 +36,20 @@ export default function Join() {
         <input value={name} onChange={(e) => setName(e.target.value)} required />
       </label>
       {teacherMode ? (
-        <label>
-          반 이름
-          <input value={className} onChange={(e) => setClassName(e.target.value)}
-            placeholder="예: 2학년 3반" required />
-        </label>
+        <div className="field-row">
+          <label>
+            학년
+            <select value={grade} onChange={(e) => setGrade(e.target.value)} required>
+              <option value="" disabled>고르기</option>
+              {[1, 2, 3].map((g) => <option key={g} value={g}>{g}학년</option>)}
+            </select>
+          </label>
+          <label>
+            반
+            <input type="number" inputMode="numeric" min="1" max="20" value={classNo}
+              onChange={(e) => setClassNo(e.target.value)} placeholder="예: 3" required />
+          </label>
+        </div>
       ) : (
         <label>
           초대 코드 (선생님께 받은 6자리)

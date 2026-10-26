@@ -19,12 +19,15 @@ export function SessionProvider({ children }) {
   const loadMember = useCallback(async () => {
     if (!user) return setMember(user === null ? null : undefined)
     // 1차 버전은 한 사람이 한 반에만 속한다고 보고 첫 번째 반을 씀
-    const { data } = await supabase
+    const query = (cols) => supabase
       .from('members')
-      .select('class_id, display_name, role, classes(name, invite_code)')
+      .select(`class_id, display_name, role, classes(${cols})`)
       .eq('user_id', user.id)
       .order('joined_at')
       .limit(1)
+    let { data, error } = await query('name, invite_code, grade, class_no')
+    // 2차 DB 업데이트(002_real_use.sql) 전이면 학년/반 칸이 없으니 빼고 다시 읽음
+    if (error) ({ data } = await query('name, invite_code'))
     setMember(data?.[0] ?? null)
   }, [user])
 
