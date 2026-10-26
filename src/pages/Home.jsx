@@ -7,6 +7,7 @@ import { useMeals } from './Meals.jsx'
 import Tray from '../components/Tray.jsx'
 import DueList from '../components/DueList.jsx'
 import InstallHint from '../components/InstallHint.jsx'
+import PushToggle from '../components/PushToggle.jsx'
 import { useDone } from '../done.js'
 import { useNeis } from '../neis.js'
 import { useTimetable } from './Timetable.jsx'
@@ -94,6 +95,7 @@ export default function Home() {
         {soon.length
           ? <DueList items={soon} done={done} onToggle={toggle} />
           : <p className="empty">{assessments.length ? '다가오는 수행평가를 다 끝냈어요.' : '다가오는 수행평가가 없어요.'}</p>}
+        <PushToggle compact />
       </section>
 
       {school.data.length > 0 && (

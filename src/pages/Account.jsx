@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase.js'
 import { useSession, ROLE_NAMES } from '../session.jsx'
+import PushToggle from '../components/PushToggle.jsx'
 
 export default function Account() {
   const { user, member, isTeacher, reloadMember } = useSession()
@@ -57,6 +58,8 @@ export default function Account() {
         <div><dt>로그인</dt><dd>{user.email}</dd></div>
       </dl>
       <button className="btn-quiet self-start" onClick={() => supabase.auth.signOut()}>로그아웃</button>
+
+      <PushToggle />
 
       <form className="section danger-zone" onSubmit={reset}>
         <h2>계정 초기화</h2>
