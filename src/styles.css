@@ -265,6 +265,7 @@ textarea { resize: vertical; line-height: 1.6; }
   display: flex; flex-direction: column; gap: 12px;
 }
 .board-note { font-size: 13px; opacity: 0.6; text-align: center; }
+.board-note a { color: inherit; }
 .btn-chalk {
   min-height: 52px; padding: 0 20px; border: none; border-radius: 12px;
   background: #eef3ee; color: #173b2f; font-weight: 600; font-size: 17px;
