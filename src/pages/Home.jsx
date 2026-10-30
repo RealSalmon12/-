@@ -5,6 +5,8 @@ import { useSession, ROLE_NAMES } from '../session.jsx'
 import { today, formatDate, addDays } from '../util.js'
 import { useMeals } from './Meals.jsx'
 import Tray from '../components/Tray.jsx'
+import NeisCredit from '../components/NeisCredit.jsx'
+import MealRating from '../components/MealRating.jsx'
 import DueList from '../components/DueList.jsx'
 import InstallHint from '../components/InstallHint.jsx'
 import PushToggle from '../components/PushToggle.jsx'
@@ -15,6 +17,7 @@ import { useNeis } from '../neis.js'
 import { useTimetable } from './Timetable.jsx'
 import { useCallsUsed, useCallLimit } from './Calls.jsx'
 import { useAnnouncements } from './Announcements.jsx'
+import { useOpenReports } from './Reports.jsx'
 
 // 오후 1시 반이 지나면 석식부터 보여줌
 const defaultMeal = (list) => {
@@ -37,6 +40,7 @@ export default function Home() {
   const timetable = useTimetable(t, t)
   const [callsUsed] = useCallsUsed()
   const callLimit = useCallLimit(member.class_id)
+  const openReports = useOpenReports(member.class_id, isTeacher)
   const { items: announcements } = useAnnouncements(member.class_id, 1)
   // 일주일 안의 최신 공지만 홈 위쪽에
   const recent = announcements?.[0] && Date.now() - new Date(announcements[0].created_at) < 7 * 86400_000 ? announcements[0] : null
@@ -95,6 +99,10 @@ export default function Home() {
         <Link to="/announcements" className="call-strip"><b>선생님 공지 보내기</b><span className="fine">반 전체에 알림</span></Link>
       )}
 
+      {openReports > 0 && (
+        <Link to="/reports" className="call-strip has-calls"><b>채팅 신고</b><span className="fine">처리할 신고 {openReports}건</span></Link>
+      )}
+
       <Link to="/calls" className={`call-strip${canPost && classCalls ? ' has-calls' : ''}`}>
         <b>관리자 호출</b>
         <span className="fine">
@@ -122,6 +130,7 @@ export default function Home() {
           : shown ? (
             <>
               <Tray dishes={shown.dishes} />
+              <MealRating date={t} type={shown.meal_type} />
               {shown.calories && <p className="fine">{shown.calories.replace(' Kcal', ' kcal')}</p>}
             </>
           )
@@ -172,6 +181,7 @@ export default function Home() {
         ) : <p className="empty">아직 올라온 통신문이 없어요.</p>}
       </section>
 
+      <NeisCredit what="급식·시간표·학사일정" />
       <InstallHint />
     </div>
   )

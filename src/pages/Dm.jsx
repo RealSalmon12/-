@@ -6,6 +6,7 @@ import { formatDate } from '../util.js'
 import { useChatUrls, loadClassPeople } from '../chatMedia.js'
 import Avatar from '../components/Avatar.jsx'
 import ChatTabs from '../components/ChatTabs.jsx'
+import { useUnread, Badge } from '../unread.jsx'
 
 const PAGE = 100
 const COLS = 'id, student_id, sender_id, body, created_at'
@@ -28,6 +29,7 @@ function DmList() {
   const [latest, setLatest] = useState(null)
   const [error, setError] = useState('')
   const url = useChatUrls(Object.values(people).map((p) => p.avatar_path))
+  const { dm: unread } = useUnread()
 
   useEffect(() => {
     loadClassPeople(member.class_id).then(setPeople)
@@ -66,6 +68,7 @@ function DmList() {
                     <b>{s.display_name}</b>
                     <span className="fine">{last ? last.body : '아직 대화 없음'}</span>
                   </span>
+                  <Badge n={unread[s.user_id]} />
                   {last && <span className="fine dm-row-time">{dayOf(last.created_at) === dayOf(new Date()) ? timeOf(last.created_at) : formatDate(dayOf(last.created_at))}</span>}
                 </Link>
               </li>
@@ -91,6 +94,7 @@ function DmThread({ studentId }) {
   const stickRef = useRef(true)
   const keepRef = useRef(null)
   const url = useChatUrls(Object.values(people).map((p) => p.avatar_path))
+  const { markRead } = useUnread()
 
   const merge = useCallback((rows) => setMessages((old) => {
     const map = new Map((old ?? []).map((m) => [m.id, m]))
@@ -165,6 +169,10 @@ function DmThread({ studentId }) {
     setPicked(null)
     setMessages((list) => list.filter((x) => x.id !== m.id))
   }
+
+  // 보고 있는 마지막 메시지까지 읽음으로 남김
+  const lastId = messages?.at(-1)?.id
+  useEffect(() => { if (lastId) markRead(`dm:${studentId}`, lastId) }, [lastId, studentId, markRead])
 
   const student = people[studentId]
   const rows = []

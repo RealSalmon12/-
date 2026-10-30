@@ -53,6 +53,11 @@ supabase functions deploy meals
 
 선생님이 공지를 쓰면 반 전체에 알림이 가요. 채팅 탭의 "1:1"에서 학생과 선생님이 따로 대화해요. 관리자 호출은 한 명만 골라 부를 수 있고, 하루 횟수는 반 관리에서 선생님이 1~20번으로 정해요.
 
+### 신고·차단, 안 읽은 메시지, 공지 읽음, 투표, 급식 별점, @멘션
+
+1. SQL Editor 에서 [`010_report_unread_poll_rating.sql`](supabase/migrations/010_report_unread_poll_rating.sql) 실행
+2. `supabase functions deploy notify` (@멘션·신고 알림이 추가됨)
+
 ### 반 채팅
 
 SQL Editor 에서 [`007_class_chat.sql`](supabase/migrations/007_class_chat.sql) 실행. 같은 반 멤버끼리 실시간으로 대화하고(Realtime), 본인 메시지는 본인이, 모든 메시지는 선생님·반장·부반장이 지울 수 있어요. 한 사람이 10초에 5개까지만 보낼 수 있어요.

@@ -17,6 +17,8 @@ import Calls from './pages/Calls.jsx'
 import Chat from './pages/Chat.jsx'
 import Dm from './pages/Dm.jsx'
 import Announcements from './pages/Announcements.jsx'
+import Reports from './pages/Reports.jsx'
+import { UnreadProvider, useUnread, Badge } from './unread.jsx'
 import { HomeIcon, PencilIcon, PaperIcon, TrayIcon, GridIcon, ChatIcon } from './components/Icons.jsx'
 
 const TABS = [
@@ -39,6 +41,15 @@ export default function App() {
   if (!member) return <Join />
 
   return (
+    <UnreadProvider>
+      <Shell pathname={pathname} />
+    </UnreadProvider>
+  )
+}
+
+function Shell({ pathname }) {
+  const { total } = useUnread()
+  return (
     <div className="app">
       <main>
         <Routes>
@@ -59,6 +70,7 @@ export default function App() {
           <Route path="/dm" element={<Dm />} />
           <Route path="/dm/:studentId" element={<Dm />} />
           <Route path="/announcements" element={<Announcements />} />
+          <Route path="/reports" element={<Reports />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
@@ -67,7 +79,10 @@ export default function App() {
           <NavLink key={t.to} to={t.to} end={t.to === '/'}
             // 1:1 채팅도 채팅 탭에 속함
             className={({ isActive }) => (isActive || (t.to === '/chat' && pathname.startsWith('/dm')) ? 'active' : '')}>
-            <t.Icon />
+            <span className="tab-icon">
+              <t.Icon />
+              {t.to === '/chat' && <Badge n={total} />}
+            </span>
             {t.label}
           </NavLink>
         ))}
