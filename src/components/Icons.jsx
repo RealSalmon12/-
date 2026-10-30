@@ -22,3 +22,6 @@ export const PlusIcon = () => (
 export const ChatIcon = () => (
   <svg {...base}><path d="M5 5h14a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-8l-4 3.5V17H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z" /><path d="M8.5 10h7M8.5 13h4" /></svg>
 )
+export const PhotoIcon = () => (
+  <svg {...base}><rect x="3" y="5" width="18" height="14" rx="2.5" /><circle cx="9" cy="10" r="1.6" /><path d="m21 16-5-5-8 8" /></svg>
+)
