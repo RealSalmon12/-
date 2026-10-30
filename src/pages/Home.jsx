@@ -11,6 +11,7 @@ import PushToggle from '../components/PushToggle.jsx'
 import { useDone } from '../done.js'
 import { useNeis } from '../neis.js'
 import { useTimetable } from './Timetable.jsx'
+import { useCallsUsed, DAILY_CALLS } from './Calls.jsx'
 
 // 오후 1시 반이 지나면 석식부터 보여줌
 const defaultMeal = (list) => {
@@ -20,7 +21,7 @@ const defaultMeal = (list) => {
 }
 
 export default function Home() {
-  const { member, isTeacher } = useSession()
+  const { member, isTeacher, canPost } = useSession()
   const [assessments, setAssessments] = useState([])
   const [notices, setNotices] = useState([])
   const [mealType, setMealType] = useState(null)
@@ -29,6 +30,8 @@ export default function Home() {
   const shown = meals.list.find((m) => m.meal_type === (mealType ?? defaultMeal(meals.list)))
   const { done, toggle } = useDone()
   const timetable = useTimetable(t, t)
+  const [callsUsed] = useCallsUsed()
+  const [classCalls, setClassCalls] = useState(null)
   const school = useNeis('schedule', { from: t, to: addDays(t, 30) })
   // 끝낸 건 빼고 가까운 순서로 4개
   const soon = assessments.filter((a) => !done.has(a.id)).slice(0, 4)
@@ -40,7 +43,12 @@ export default function Home() {
     supabase.from('notices').select('id, title, created_at, due_date')
       .eq('class_id', member.class_id).order('created_at', { ascending: false }).limit(3)
       .then(({ data }) => setNotices(data ?? []))
-  }, [member.class_id, t])
+    if (canPost) {
+      supabase.from('admin_calls').select('id', { count: 'exact', head: true })
+        .eq('class_id', member.class_id).gte('created_at', `${t}T00:00:00+09:00`)
+        .then(({ count, error }) => setClassCalls(error ? null : count ?? 0))
+    }
+  }, [member.class_id, t, canPost])
 
   return (
     <div className="page">
@@ -62,6 +70,15 @@ export default function Home() {
           ))}
         </Link>
       )}
+
+      <Link to="/calls" className={`call-strip${canPost && classCalls ? ' has-calls' : ''}`}>
+        <b>관리자 호출</b>
+        <span className="fine">
+          {canPost
+            ? (classCalls ? `오늘 ${classCalls}건 들어왔어요` : '오늘 들어온 호출 없음')
+            : (callsUsed === null ? '' : `오늘 ${Math.max(0, DAILY_CALLS - callsUsed)}번 남음`)}
+        </span>
+      </Link>
 
       <section className="section">
         <div className="section-head">
