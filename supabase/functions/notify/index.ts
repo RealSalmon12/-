@@ -1,5 +1,6 @@
 // 공지·1:1 채팅·@멘션·채팅 신고 알림: 앱이 글을 저장한 뒤 { kind, id } 로 부름.
 // kind: 'announcement' | 'dm' | 'mention' (반 채팅 메시지) | 'report' (채팅 신고)
+//   | 'notice_remind' (가정통신문을 안 낸 학생에게, 관리자만, 한 시간에 한 번)
 // 쓴 사람 본인만 부를 수 있고, 같은 글로는 한 번만 보냄 (notified_at).
 // 필요한 시크릿: VAPID_KEYS (remind 함수와 같은 값), VAPID_CONTACT (없어도 됨)
 import { createClient } from 'npm:@supabase/supabase-js@2'
@@ -53,6 +54,7 @@ async function notify(req: Request) {
     mention: ['chat_messages', 'user_id'],
     report: ['chat_reports', 'reporter_id']
   }
+  if (kind === 'notice_remind' && id) return noticeRemind(req, id)
   const [table, author] = TABLES[kind] ?? []
   if (!table || !id) return json({ error: 'kind, id 가 필요해요' }, 400)
 
@@ -120,6 +122,41 @@ async function notify(req: Request) {
     tag: `dm-${row.student_id}`
   }, 12 * 3600)
   return json({ sent })
+}
+
+// 가정통신문 제출 기한 알림: 아직 체크 안 된 학생에게만
+async function noticeRemind(req: Request, noticeId: string) {
+  const asUser = createClient(url, anonKey, {
+    global: { headers: { Authorization: req.headers.get('Authorization') ?? '' } }
+  })
+  const { data: { user } } = await asUser.auth.getUser()
+  if (!user) return json({ error: 'login' }, 401)
+
+  const { data: notice } = await admin.from('notices').select('id, class_id, title, due_date, reminded_at').eq('id', noticeId).maybeSingle()
+  if (!notice) return json({ error: 'not found' }, 404)
+  const { data: members } = await admin.from('members').select('user_id, role').eq('class_id', notice.class_id)
+  const me = members?.find((m) => m.user_id === user.id)
+  if (!me || !['teacher', 'president', 'vice'].includes(me.role)) return json({ error: 'forbidden' }, 403)
+
+  // 한 시간 안에 이미 보냈으면 다시 안 보냄 (동시에 눌러도 한 번만)
+  const hourAgo = new Date(Date.now() - 3600_000).toISOString()
+  const { data: claimed } = await admin.from('notices').update({ reminded_at: new Date().toISOString() })
+    .eq('id', noticeId).or(`reminded_at.is.null,reminded_at.lt.${hourAgo}`).select('id').maybeSingle()
+  if (!claimed) return json({ error: 'too soon' }, 429)
+
+  const { data: done } = await admin.from('notice_submissions').select('user_id').eq('notice_id', noticeId)
+  const doneIds = new Set((done ?? []).map((d) => d.user_id))
+  const to = (members ?? []).filter((m) => m.role !== 'teacher' && !doneIds.has(m.user_id) && m.user_id !== user.id)
+    .map((m) => m.user_id)
+  const sent = await push(to, {
+    title: `가정통신문 제출: ${notice.title}`,
+    body: notice.due_date
+      ? `${Number(notice.due_date.slice(5, 7))}월 ${Number(notice.due_date.slice(8, 10))}일까지 내 주세요. 이미 냈다면 선생님께 말씀드려요.`
+      : '아직 안 냈다면 내 주세요.',
+    url: `/notices/${noticeId}`,
+    tag: `notice-${noticeId}`
+  }, 24 * 3600)
+  return json({ sent, students: to.length })
 }
 
 Deno.serve(async (req) => {

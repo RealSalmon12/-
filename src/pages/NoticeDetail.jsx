@@ -4,6 +4,7 @@ import { supabase } from '../supabase.js'
 import { useSession } from '../session.jsx'
 import { formatDate } from '../util.js'
 import { signedUrls } from './Notices.jsx'
+import Submissions from '../components/Submissions.jsx'
 
 export default function NoticeDetail() {
   const { id } = useParams()
@@ -42,6 +43,7 @@ export default function NoticeDetail() {
           <img key={u} src={u} alt={`통신문 ${i + 1}쪽`} onClick={() => setZoom(u)} />
         ))}
       </div>
+      {n.due_date && <Submissions noticeId={n.id} />}
       {canPost && <button className="btn-danger" onClick={remove}>삭제</button>}
       {zoom && (
         <div className="viewer" onClick={() => setZoom(null)}>
