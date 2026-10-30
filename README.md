@@ -58,6 +58,11 @@ supabase functions deploy meals
 1. SQL Editor 에서 [`010_report_unread_poll_rating.sql`](supabase/migrations/010_report_unread_poll_rating.sql) 실행
 2. `supabase functions deploy notify` (@멘션·신고 알림이 추가됨)
 
+### 가정통신문 제출 체크, 반 D-day
+
+1. SQL Editor 에서 [`011_submissions_dday.sql`](supabase/migrations/011_submissions_dday.sql) 실행
+2. `supabase functions deploy notify` (안 낸 학생 알림)
+
 ### 반 채팅
 
 SQL Editor 에서 [`007_class_chat.sql`](supabase/migrations/007_class_chat.sql) 실행. 같은 반 멤버끼리 실시간으로 대화하고(Realtime), 본인 메시지는 본인이, 모든 메시지는 선생님·반장·부반장이 지울 수 있어요. 한 사람이 10초에 5개까지만 보낼 수 있어요.

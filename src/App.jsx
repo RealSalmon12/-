@@ -18,6 +18,7 @@ import Chat from './pages/Chat.jsx'
 import Dm from './pages/Dm.jsx'
 import Announcements from './pages/Announcements.jsx'
 import Reports from './pages/Reports.jsx'
+import Dday from './pages/Dday.jsx'
 import { UnreadProvider, useUnread, Badge } from './unread.jsx'
 import { HomeIcon, PencilIcon, PaperIcon, TrayIcon, GridIcon, ChatIcon } from './components/Icons.jsx'
 
@@ -71,6 +72,7 @@ function Shell({ pathname }) {
           <Route path="/dm/:studentId" element={<Dm />} />
           <Route path="/announcements" element={<Announcements />} />
           <Route path="/reports" element={<Reports />} />
+          <Route path="/dday" element={<Dday />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

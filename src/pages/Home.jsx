@@ -18,6 +18,7 @@ import { useTimetable } from './Timetable.jsx'
 import { useCallsUsed, useCallLimit } from './Calls.jsx'
 import { useAnnouncements } from './Announcements.jsx'
 import { useOpenReports } from './Reports.jsx'
+import { DdayStrip } from './Dday.jsx'
 
 // 오후 1시 반이 지나면 석식부터 보여줌
 const defaultMeal = (list) => {
@@ -88,6 +89,8 @@ export default function Home() {
           ))}
         </Link>
       )}
+
+      <DdayStrip />
 
       {recent ? (
         <Link to="/announcements" className="home-announce">
