@@ -42,3 +42,13 @@ export async function loadClassPeople(classId) {
   if (res.error) res = await supabase.from('members').select('user_id, display_name, role').eq('class_id', classId)
   return Object.fromEntries((res.data ?? []).map((m) => [m.user_id, m]))
 }
+
+// 내 프로필 사진 경로 (DB 업데이트 전이거나 없으면 null)
+export function useMyAvatarPath(userId, classId) {
+  const [path, setPath] = useState(undefined) // undefined = 아직 읽는 중
+  useEffect(() => {
+    supabase.from('members').select('avatar_path').eq('user_id', userId).eq('class_id', classId).single()
+      .then(({ data, error }) => setPath(error ? null : data.avatar_path))
+  }, [userId, classId])
+  return [path, setPath]
+}

@@ -72,6 +72,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .masthead-date { color: var(--ink-soft); }
 .masthead-class { font-size: 40px; line-height: 1.1; color: var(--board); margin: 2px 0 4px; }
 .masthead-me { font-size: 13px; color: var(--ink-soft); }
+.masthead-actions { flex: none; display: flex; align-items: center; gap: 8px; }
+.masthead-avatar { display: flex; border-radius: 50%; }
+.masthead-avatar .avatar { box-shadow: 0 0 0 1px var(--rule); }
 
 /* 버튼 */
 .btn-primary {

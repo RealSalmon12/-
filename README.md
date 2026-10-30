@@ -37,6 +37,8 @@ supabase functions deploy meals
 
 매일 18시(한국 시간)에 다음 날 마감인 수행평가를 알림을 켠 학생에게 보내요.
 
+아이폰·아이패드(iOS 16.4 이상)는 홈 화면에 추가한 앱에서, 맥은 사파리·크롬에서 알림을 받아요. 애플 푸시 서버는 VAPID 연락처가 진짜 주소여야 해서 기본값을 앱 주소로 두었어요. 바꾸려면 `VAPID_CONTACT` 시크릿에 `mailto:` 또는 `https:` 주소를 넣으세요.
+
 ### 관리자 호출 (선택)
 
 1. SQL Editor 에서 [`006_call_admin.sql`](supabase/migrations/006_call_admin.sql) 실행

@@ -1,7 +1,7 @@
 // 내일이 마감인 수행평가를 반 학생들에게 푸시 알림으로 알려 주는 Edge Function.
 // 매일 18시(한국 시간)에 pg_cron 이 부름 (005_push_reminder.sql).
 // 이미 "다 했어요"를 누른 사람과 이미 알림을 받은 사람은 빼고 보냄.
-// 필요한 시크릿: VAPID_KEYS (JWK 두 개를 담은 JSON), VAPID_CONTACT (mailto: 주소, 없어도 됨)
+// 필요한 시크릿: VAPID_KEYS (JWK 두 개를 담은 JSON), VAPID_CONTACT (mailto: 또는 https 주소, 없어도 됨)
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import * as webpush from 'jsr:@negrel/webpush@0.5.0'
 
@@ -12,7 +12,8 @@ const admin = createClient(
 
 const vapidKeys = await webpush.importVapidKeys(JSON.parse(Deno.env.get('VAPID_KEYS') ?? '{}'))
 const appServer = await webpush.ApplicationServer.new({
-  contactInformation: Deno.env.get('VAPID_CONTACT') ?? 'mailto:noreply@example.com',
+  // 애플(아이폰·맥) 푸시 서버는 연락처가 진짜 주소가 아니면 거절하므로 앱 주소를 기본으로 씀
+  contactInformation: Deno.env.get('VAPID_CONTACT') ?? 'https://three-navy-90.vercel.app',
   vapidKeys
 })
 
