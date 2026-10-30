@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useNeis } from '../neis.js'
 import { today, addDays, formatDate } from '../util.js'
 import Tray from '../components/Tray.jsx'
@@ -14,7 +15,18 @@ export function useMeals(from, to) {
   return { loading, list, error: error && '급식을 불러오지 못했어요.' }
 }
 
+export function AllergyLegend() {
+  return (
+    <details className="legend">
+      <summary>알레르기 번호 보기</summary>
+      <p>1 난류, 2 우유, 3 메밀, 4 땅콩, 5 대두, 6 밀, 7 고등어, 8 게, 9 새우, 10 돼지고기, 11 복숭아,
+        12 토마토, 13 아황산류, 14 호두, 15 닭고기, 16 쇠고기, 17 오징어, 18 조개류, 19 잣</p>
+    </details>
+  )
+}
+
 export default function Meals() {
+  const navigate = useNavigate()
   const [date, setDate] = useState(today())
   const { loading, list, error } = useMeals(date, date)
   const { member } = useSession()
@@ -22,6 +34,7 @@ export default function Meals() {
 
   return (
     <div className="page">
+      <button className="back" onClick={() => navigate(-1)}>‹ 뒤로</button>
       <header className="page-head">
         <h1>급식</h1>
       </header>
@@ -60,11 +73,7 @@ export default function Meals() {
           </ol>
         </section>
       )}
-      <details className="legend">
-        <summary>알레르기 번호 보기</summary>
-        <p>1 난류, 2 우유, 3 메밀, 4 땅콩, 5 대두, 6 밀, 7 고등어, 8 게, 9 새우, 10 돼지고기, 11 복숭아,
-          12 토마토, 13 아황산류, 14 호두, 15 닭고기, 16 쇠고기, 17 오징어, 18 조개류, 19 잣</p>
-      </details>
+      <AllergyLegend />
       <NeisCredit what="급식" />
     </div>
   )
