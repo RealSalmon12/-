@@ -5,6 +5,7 @@ import { useSession, ROLE_NAMES } from '../session.jsx'
 import { formatDate } from '../util.js'
 import { prepareImage, useChatUrls, loadClassPeople } from '../chatMedia.js'
 import Avatar from '../components/Avatar.jsx'
+import ChatTabs from '../components/ChatTabs.jsx'
 import { PhotoIcon } from '../components/Icons.jsx'
 
 const PAGE = 100
@@ -175,6 +176,7 @@ export default function Chat() {
   return (
     <div className="chat">
       <header className="chat-head">
+        <ChatTabs />
         <div className="section-head">
           <h1>{member.classes.name} 채팅</h1>
           <Link className="more" to="/account">내 프로필</Link>

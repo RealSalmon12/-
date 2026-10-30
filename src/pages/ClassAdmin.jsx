@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase.js'
 import { useSession, ROLE_NAMES } from '../session.jsx'
 import SchoolPicker, { gradesFor } from '../components/SchoolPicker.jsx'
+import { useCallLimit } from './Calls.jsx'
 
 export default function ClassAdmin() {
   const { member, isTeacher, reloadMember } = useSession()
@@ -11,6 +12,9 @@ export default function ClassAdmin() {
   const [grade, setGrade] = useState(member.classes.grade ?? '')
   const [classNo, setClassNo] = useState(member.classes.class_no ?? '')
   const [saved, setSaved] = useState('')
+  const currentLimit = useCallLimit(member.class_id)
+  const [limit, setLimit] = useState(null)
+  const [limitSaved, setLimitSaved] = useState('')
   const c = member.classes
   const [school, setSchool] = useState(
     c.office_code ? { office: c.office_code, code: c.school_code ?? '', name: c.school_name, kind: c.school_kind } : null
@@ -49,6 +53,12 @@ export default function ClassAdmin() {
     if (!error) reloadMember()
   }
 
+  async function saveLimit(e) {
+    e.preventDefault()
+    const { error } = await supabase.from('classes').update({ daily_call_limit: Number(limit) }).eq('id', member.class_id)
+    setLimitSaved(error ? 'DB 업데이트(009_notice_dm_calls.sql)를 먼저 실행해 주세요.' : '저장했어요. 오늘부터 바로 적용돼요.')
+  }
+
   async function resetCode() {
     if (!confirm('초대 코드를 새로 만들면 예전 코드는 못 써요. 계속할까요?')) return
     await supabase.rpc('reset_invite_code', { cid: member.class_id })
@@ -84,6 +94,22 @@ export default function ClassAdmin() {
           {saved && <span className="fine" role="status">{saved}</span>}
         </div>
       </form>
+      <form className="section" onSubmit={saveLimit}>
+        <h2>관리자 호출 횟수</h2>
+        <p className="fine">학생 한 명이 하루에 관리자를 부를 수 있는 횟수예요. 한국 시간 0시에 다시 채워져요.</p>
+        <div className="actions">
+          <div className="stepper call-stepper">
+            <button type="button" className="btn-quiet" aria-label="한 번 줄이기"
+              onClick={() => setLimit(Math.max(1, (limit ?? currentLimit) - 1))}>−</button>
+            <b aria-live="polite">하루 {limit ?? currentLimit}번</b>
+            <button type="button" className="btn-quiet" aria-label="한 번 늘리기"
+              onClick={() => setLimit(Math.min(20, (limit ?? currentLimit) + 1))}>+</button>
+          </div>
+          <button className="btn-quiet" disabled={limit === null || limit === currentLimit}>저장</button>
+        </div>
+        {limitSaved && <p className="fine" role="status">{limitSaved}</p>}
+      </form>
+
       <section className="section">
         <h2>멤버 {members.length}명</h2>
         <ul className="member-list">

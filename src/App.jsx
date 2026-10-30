@@ -1,4 +1,4 @@
-import { NavLink, Navigate, Route, Routes } from 'react-router-dom'
+import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { useSession } from './session.jsx'
 import Login from './pages/Login.jsx'
 import Join from './pages/Join.jsx'
@@ -15,6 +15,8 @@ import Timetable from './pages/Timetable.jsx'
 import Account from './pages/Account.jsx'
 import Calls from './pages/Calls.jsx'
 import Chat from './pages/Chat.jsx'
+import Dm from './pages/Dm.jsx'
+import Announcements from './pages/Announcements.jsx'
 import { HomeIcon, PencilIcon, PaperIcon, TrayIcon, GridIcon, ChatIcon } from './components/Icons.jsx'
 
 const TABS = [
@@ -28,6 +30,7 @@ const TABS = [
 
 export default function App() {
   const { user, member } = useSession()
+  const { pathname } = useLocation()
 
   if (user === undefined || (user && member === undefined)) {
     return <div className="splash" aria-label="불러오는 중" />
@@ -53,12 +56,17 @@ export default function App() {
           <Route path="/account" element={<Account />} />
           <Route path="/calls" element={<Calls />} />
           <Route path="/chat" element={<Chat />} />
+          <Route path="/dm" element={<Dm />} />
+          <Route path="/dm/:studentId" element={<Dm />} />
+          <Route path="/announcements" element={<Announcements />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
       <nav className="tabbar">
         {TABS.map((t) => (
-          <NavLink key={t.to} to={t.to} end={t.to === '/'}>
+          <NavLink key={t.to} to={t.to} end={t.to === '/'}
+            // 1:1 채팅도 채팅 탭에 속함
+            className={({ isActive }) => (isActive || (t.to === '/chat' && pathname.startsWith('/dm')) ? 'active' : '')}>
             <t.Icon />
             {t.label}
           </NavLink>

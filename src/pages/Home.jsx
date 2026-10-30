@@ -13,7 +13,8 @@ import { useChatUrls, useMyAvatarPath } from '../chatMedia.js'
 import { useDone } from '../done.js'
 import { useNeis } from '../neis.js'
 import { useTimetable } from './Timetable.jsx'
-import { useCallsUsed, DAILY_CALLS } from './Calls.jsx'
+import { useCallsUsed, useCallLimit } from './Calls.jsx'
+import { useAnnouncements } from './Announcements.jsx'
 
 // 오후 1시 반이 지나면 석식부터 보여줌
 const defaultMeal = (list) => {
@@ -35,6 +36,10 @@ export default function Home() {
   const { done, toggle } = useDone()
   const timetable = useTimetable(t, t)
   const [callsUsed] = useCallsUsed()
+  const callLimit = useCallLimit(member.class_id)
+  const { items: announcements } = useAnnouncements(member.class_id, 1)
+  // 일주일 안의 최신 공지만 홈 위쪽에
+  const recent = announcements?.[0] && Date.now() - new Date(announcements[0].created_at) < 7 * 86400_000 ? announcements[0] : null
   const [classCalls, setClassCalls] = useState(null)
   const school = useNeis('schedule', { from: t, to: addDays(t, 30) })
   // 끝낸 건 빼고 가까운 순서로 4개
@@ -80,12 +85,22 @@ export default function Home() {
         </Link>
       )}
 
+      {recent ? (
+        <Link to="/announcements" className="home-announce">
+          <span className="label">선생님 공지</span>
+          <b>{recent.title}</b>
+          {recent.body && <p>{recent.body}</p>}
+        </Link>
+      ) : isTeacher && (
+        <Link to="/announcements" className="call-strip"><b>선생님 공지 보내기</b><span className="fine">반 전체에 알림</span></Link>
+      )}
+
       <Link to="/calls" className={`call-strip${canPost && classCalls ? ' has-calls' : ''}`}>
         <b>관리자 호출</b>
         <span className="fine">
           {canPost
             ? (classCalls ? `오늘 ${classCalls}건 들어왔어요` : '오늘 들어온 호출 없음')
-            : (callsUsed === null ? '' : `오늘 ${Math.max(0, DAILY_CALLS - callsUsed)}번 남음`)}
+            : (callsUsed === null ? '' : `오늘 ${Math.max(0, callLimit - callsUsed)}번 남음`)}
         </span>
       </Link>
 
