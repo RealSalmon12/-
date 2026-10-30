@@ -373,3 +373,19 @@ textarea { resize: vertical; line-height: 1.6; }
 }
 .school-chosen > div { display: flex; flex-direction: column; }
 .masthead-school { display: block; font-size: 13px; }
+
+/* 관리자 호출 */
+.call-strip {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+  padding: 12px 14px; border-radius: 12px; border: 1px solid var(--rule); background: var(--surface);
+}
+.call-strip b { font-weight: 600; color: var(--board); }
+.call-strip.has-calls { border-color: var(--redpen); }
+.call-strip.has-calls .fine { color: var(--redpen); font-weight: 600; }
+.call-box { padding: 16px; border-radius: 14px; background: color-mix(in srgb, var(--highlight) 22%, transparent); }
+.call-sent { color: var(--board); font-weight: 600; }
+.call-day { display: flex; flex-direction: column; gap: 4px; }
+.call-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 12px 0; }
+.call-row b { font-weight: 600; }
+.call-row p { margin: 2px 0 0; overflow-wrap: anywhere; }
+.call-row > .fine { flex: none; }

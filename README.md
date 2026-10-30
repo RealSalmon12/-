@@ -37,6 +37,13 @@ supabase functions deploy meals
 
 매일 18시(한국 시간)에 다음 날 마감인 수행평가를 알림을 켠 학생에게 보내요.
 
+### 관리자 호출 (선택)
+
+1. SQL Editor 에서 [`006_call_admin.sql`](supabase/migrations/006_call_admin.sql) 실행
+2. `supabase functions deploy call-admin` (VAPID_KEYS 시크릿은 remind 와 같이 씀)
+
+학생·반장·부반장이 홈의 **관리자 호출**로 선생님·반장·부반장에게 바로 알림을 보내요. 한 사람당 하루(한국 시간) 3번까지예요.
+
 학교는 반마다 앱에서 검색해서 고르므로 학교 코드를 따로 넣을 필요가 없어요.
 대시보드에서 올린다면 **Edge Functions → meals → Code** 에 [`index.ts`](supabase/functions/meals/index.ts) 를 붙여넣고 Deploy 하면 돼요. 이 함수 하나가 급식, 시간표, 학사일정을 모두 처리해요.
 

@@ -1,4 +1,5 @@
 import { usePush } from '../push.js'
+import { useSession } from '../session.jsx'
 
 const NOTES = {
   on: '마감 전날 저녁 6시에 알려 드려요. "다 했어요"를 누른 수행평가는 빼고 보내요.',
@@ -11,6 +12,7 @@ const NOTES = {
 // 마감 하루 전 알림 켜기/끄기 (내 계정, 홈)
 export default function PushToggle({ compact = false }) {
   const { status, busy, error, enable, disable } = usePush()
+  const { canPost } = useSession()
   if (status === 'loading') return null
   if (compact && status !== 'off') return null
 
@@ -22,6 +24,7 @@ export default function PushToggle({ compact = false }) {
         {status === 'off' && <button className="btn-quiet" onClick={enable} disabled={busy}>{busy ? '켜는 중…' : '알림 켜기'}</button>}
       </div>
       <p className="fine">{NOTES[status]}</p>
+      {canPost && (status === 'on' || status === 'off') && <p className="fine">관리자 호출도 이 알림으로 받아요.</p>}
       {error && <p className="error" role="alert">{error}</p>}
     </div>
   )
