@@ -1,4 +1,5 @@
-// 관리자 호출: 하루 3번 제한을 통과하면 반의 선생님·반장·부반장에게 푸시 알림을 보냄.
+// 관리자 호출: 하루 횟수 제한(반 설정, 기본 3번)을 통과하면 반의 선생님·반장·부반장에게 푸시 알림을 보냄.
+// target 을 주면 그 관리자 한 명에게만 보냄.
 // 앱에서 로그인한 사용자가 부름 (supabase.functions.invoke('call-admin')).
 // 필요한 시크릿: VAPID_KEYS (remind 함수와 같은 값), VAPID_CONTACT (없어도 됨)
 import { createClient } from 'npm:@supabase/supabase-js@2'
@@ -24,24 +25,26 @@ const json = (body: unknown, status = 200) => Response.json(body, { status, head
 const ROLE_NAMES: Record<string, string> = { teacher: '선생님', president: '반장', vice: '부반장', student: '학생' }
 
 async function callAdmin(req: Request) {
-  const { message = '' } = await req.json().catch(() => ({}))
+  const { message = '', target = null } = await req.json().catch(() => ({}))
 
-  // 부른 사람 권한으로 call_admin() 실행 → 하루 3번 제한은 DB 가 지킴
+  // 부른 사람 권한으로 call_admin() 실행 → 하루 횟수 제한과 대상 확인은 DB 가 지킴
   const asUser = createClient(url, anonKey, {
     global: { headers: { Authorization: req.headers.get('Authorization') ?? '' } }
   })
-  const { data: callId, error } = await asUser.rpc('call_admin', { msg: String(message) })
+  const { data: callId, error } = await asUser.rpc('call_admin', target ? { msg: String(message), target } : { msg: String(message) })
   if (error) {
     if (error.message.includes('DAILY_LIMIT')) return json({ error: 'limit' }, 429)
+    if (error.message.includes('BAD_TARGET')) return json({ error: 'target' }, 400)
     return json({ error: error.message }, 400)
   }
 
-  const { data: call } = await admin.from('admin_calls').select('class_id, user_id, message').eq('id', callId).single()
+  const { data: call } = await admin.from('admin_calls').select('*').eq('id', callId).single()
   const { data: members } = await admin.from('members')
     .select('user_id, display_name, role').eq('class_id', call!.class_id)
   const caller = members?.find((m) => m.user_id === call!.user_id)
   const recipients = (members ?? [])
     .filter((m) => ['teacher', 'president', 'vice'].includes(m.role) && m.user_id !== call!.user_id)
+    .filter((m) => !call!.target_id || m.user_id === call!.target_id)
     .map((m) => m.user_id)
 
   let sent = 0
@@ -73,7 +76,8 @@ async function callAdmin(req: Request) {
   const since = new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10) + 'T00:00:00+09:00'
   const { count } = await admin.from('admin_calls').select('id', { count: 'exact', head: true })
     .eq('user_id', call!.user_id).gte('created_at', since)
-  return json({ sent, left: Math.max(0, 3 - (count ?? 0)) })
+  const { data: cls } = await admin.from('classes').select('*').eq('id', call!.class_id).single()
+  return json({ sent, left: Math.max(0, (cls?.daily_call_limit ?? 3) - (count ?? 0)) })
 }
 
 Deno.serve(async (req) => {
