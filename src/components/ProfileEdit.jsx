@@ -1,23 +1,27 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { supabase } from '../supabase.js'
 import { useSession } from '../session.jsx'
-import { prepareImage, useChatUrls } from '../chatMedia.js'
+import { prepareImage, useChatUrls, useMyAvatarPath } from '../chatMedia.js'
 import Avatar from './Avatar.jsx'
 
 // 내 계정: 반에서 보이는 이름과 프로필 사진 바꾸기
 export default function ProfileEdit() {
   const { user, member, reloadMember } = useSession()
   const [name, setName] = useState(member.display_name)
-  const [avatar, setAvatar] = useState(undefined) // undefined = 아직 읽는 중
+  const [avatar, setAvatar] = useMyAvatarPath(user.id, member.class_id)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [saved, setSaved] = useState('')
   const url = useChatUrls([avatar])
 
+  const { hash } = useLocation()
+  const ref = useRef(null)
+
+  // 홈의 프로필 사진을 눌러 왔으면 프로필 칸으로 바로 내려감
   useEffect(() => {
-    supabase.from('members').select('avatar_path').eq('user_id', user.id).eq('class_id', member.class_id).single()
-      .then(({ data, error }) => setAvatar(error ? null : data.avatar_path))
-  }, [user.id, member.class_id])
+    if (hash === '#profile') ref.current?.scrollIntoView({ block: 'start' })
+  }, [hash])
 
   async function save(nextName, nextAvatar) {
     const { error } = await supabase.rpc('update_my_profile', { new_name: nextName, new_avatar: nextAvatar })
@@ -78,7 +82,7 @@ export default function ProfileEdit() {
   }
 
   return (
-    <section className="section profile-edit">
+    <section className="section profile-edit" id="profile" ref={ref}>
       <h2>프로필</h2>
       <div className="profile-photo">
         <Avatar url={url(avatar)} name={member.display_name} size={64} />

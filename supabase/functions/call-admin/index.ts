@@ -10,7 +10,8 @@ const admin = createClient(url, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
 
 const vapidKeys = await webpush.importVapidKeys(JSON.parse(Deno.env.get('VAPID_KEYS') ?? '{}'))
 const appServer = await webpush.ApplicationServer.new({
-  contactInformation: Deno.env.get('VAPID_CONTACT') ?? 'mailto:noreply@example.com',
+  // 애플(아이폰·맥) 푸시 서버는 연락처가 진짜 주소가 아니면 거절하므로 앱 주소를 기본으로 씀
+  contactInformation: Deno.env.get('VAPID_CONTACT') ?? 'https://three-navy-90.vercel.app',
   vapidKeys
 })
 

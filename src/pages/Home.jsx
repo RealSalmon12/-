@@ -8,6 +8,8 @@ import Tray from '../components/Tray.jsx'
 import DueList from '../components/DueList.jsx'
 import InstallHint from '../components/InstallHint.jsx'
 import PushToggle from '../components/PushToggle.jsx'
+import Avatar from '../components/Avatar.jsx'
+import { useChatUrls, useMyAvatarPath } from '../chatMedia.js'
 import { useDone } from '../done.js'
 import { useNeis } from '../neis.js'
 import { useTimetable } from './Timetable.jsx'
@@ -21,7 +23,9 @@ const defaultMeal = (list) => {
 }
 
 export default function Home() {
-  const { member, isTeacher, canPost } = useSession()
+  const { user, member, isTeacher, canPost } = useSession()
+  const [avatarPath] = useMyAvatarPath(user.id, member.class_id)
+  const avatarUrl = useChatUrls([avatarPath])
   const [assessments, setAssessments] = useState([])
   const [notices, setNotices] = useState([])
   const [mealType, setMealType] = useState(null)
@@ -58,9 +62,14 @@ export default function Home() {
           <h1 className="masthead-class">{member.classes.name}</h1>
           <p className="masthead-me">{ROLE_NAMES[member.role]} {member.display_name}</p>
         </div>
-        {isTeacher
-          ? <Link className="btn-quiet" to="/class">반 관리</Link>
-          : <Link className="btn-quiet" to="/account">내 계정</Link>}
+        <div className="masthead-actions">
+          <Link to="/account#profile" className="masthead-avatar" aria-label="내 프로필 수정">
+            <Avatar url={avatarUrl(avatarPath)} name={member.display_name} size={40} />
+          </Link>
+          {isTeacher
+            ? <Link className="btn-quiet" to="/class">반 관리</Link>
+            : <Link className="btn-quiet" to="/account">내 계정</Link>}
+        </div>
       </header>
 
       {timetable.data.length > 0 && (
