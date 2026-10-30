@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase.js'
 import { useSession } from '../session.jsx'
 import { formatDate } from '../util.js'
@@ -13,6 +13,7 @@ export async function signedUrls(paths) {
 }
 
 export default function Notices() {
+  const navigate = useNavigate()
   const { member, canPost } = useSession()
   const [items, setItems] = useState([])
   const [thumbs, setThumbs] = useState({})
@@ -30,6 +31,7 @@ export default function Notices() {
 
   return (
     <div className="page">
+      <button className="back" onClick={() => navigate(-1)}>‹ 뒤로</button>
       <header className="page-head"><h1>가정통신문</h1></header>
       {!items.length && <p className="empty">아직 올라온 통신문이 없어요.{canPost && ' 받은 종이를 사진으로 올려 주세요.'}</p>}
       <ul className="notice-list">

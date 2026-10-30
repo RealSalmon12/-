@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { supabase } from '../supabase.js'
 import { useSession } from '../session.jsx'
 import { useNeis } from '../neis.js'
@@ -34,7 +34,6 @@ export function NeedsClassNumber() {
 
 export default function Timetable() {
   const { member } = useSession()
-  const navigate = useNavigate()
   const [monday, setMonday] = useState(mondayOf(today()))
   const friday = addDays(monday, 4)
   const { ready, loading, data, error } = useTimetable(monday, friday)
@@ -53,7 +52,6 @@ export default function Timetable() {
 
   return (
     <div className="page">
-      <button className="back" onClick={() => navigate(-1)}>‹ 뒤로</button>
       <header className="page-head"><h1>시간표</h1></header>
       <div className="stepper">
         <button className="step" onClick={() => setMonday(addDays(monday, -7))} aria-label="지난주">‹</button>

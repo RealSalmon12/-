@@ -20,14 +20,14 @@ import Announcements from './pages/Announcements.jsx'
 import Reports from './pages/Reports.jsx'
 import Dday from './pages/Dday.jsx'
 import { UnreadProvider, useUnread, Badge } from './unread.jsx'
-import { HomeIcon, PencilIcon, PaperIcon, ChatIcon } from './components/Icons.jsx'
+import { HomeIcon, PencilIcon, GridIcon, ChatIcon } from './components/Icons.jsx'
 
-// 급식·시간표는 홈에서 바로 보이므로 탭에서 뺌 (홈에서 눌러 들어가면 홈 탭이 켜져 있음)
-const UNDER_HOME = ['/meals', '/timetable']
+// 급식·가정통신문은 홈에서 바로 보이므로 탭에서 뺌 (홈에서 눌러 들어가면 홈 탭이 켜져 있음)
+const underHome = (path) => path === '/meals' || path.startsWith('/notices')
 const TABS = [
   { to: '/', label: '홈', Icon: HomeIcon },
   { to: '/assessments', label: '수행평가', Icon: PencilIcon },
-  { to: '/notices', label: '통신문', Icon: PaperIcon },
+  { to: '/timetable', label: '시간표', Icon: GridIcon },
   { to: '/chat', label: '채팅', Icon: ChatIcon }
 ]
 
@@ -79,9 +79,9 @@ function Shell({ pathname }) {
       <nav className="tabbar">
         {TABS.map((t) => (
           <NavLink key={t.to} to={t.to} end={t.to === '/'}
-            // 1:1 채팅은 채팅 탭에, 급식·시간표는 홈 탭에 속함
+            // 1:1 채팅은 채팅 탭에, 급식·가정통신문은 홈 탭에 속함
             className={({ isActive }) => (isActive || (t.to === '/chat' && pathname.startsWith('/dm'))
-              || (t.to === '/' && UNDER_HOME.includes(pathname)) ? 'active' : '')}>
+              || (t.to === '/' && underHome(pathname)) ? 'active' : '')}>
             <span className="tab-icon">
               <t.Icon />
               {t.to === '/chat' && <Badge n={total} />}
