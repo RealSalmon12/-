@@ -14,14 +14,16 @@ import ClassAdmin from './pages/ClassAdmin.jsx'
 import Timetable from './pages/Timetable.jsx'
 import Account from './pages/Account.jsx'
 import Calls from './pages/Calls.jsx'
-import { HomeIcon, PencilIcon, PaperIcon, TrayIcon, GridIcon } from './components/Icons.jsx'
+import Chat from './pages/Chat.jsx'
+import { HomeIcon, PencilIcon, PaperIcon, TrayIcon, GridIcon, ChatIcon } from './components/Icons.jsx'
 
 const TABS = [
   { to: '/', label: '홈', Icon: HomeIcon },
   { to: '/assessments', label: '수행평가', Icon: PencilIcon },
   { to: '/timetable', label: '시간표', Icon: GridIcon },
   { to: '/notices', label: '통신문', Icon: PaperIcon },
-  { to: '/meals', label: '급식', Icon: TrayIcon }
+  { to: '/meals', label: '급식', Icon: TrayIcon },
+  { to: '/chat', label: '채팅', Icon: ChatIcon }
 ]
 
 export default function App() {
@@ -50,6 +52,7 @@ export default function App() {
           <Route path="/class" element={<ClassAdmin />} />
           <Route path="/account" element={<Account />} />
           <Route path="/calls" element={<Calls />} />
+          <Route path="/chat" element={<Chat />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

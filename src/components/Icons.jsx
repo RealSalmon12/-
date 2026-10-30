@@ -19,3 +19,6 @@ export const GridIcon = () => (
 export const PlusIcon = () => (
   <svg {...base} width="20" height="20"><path d="M12 5v14M5 12h14" /></svg>
 )
+export const ChatIcon = () => (
+  <svg {...base}><path d="M5 5h14a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-8l-4 3.5V17H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z" /><path d="M8.5 10h7M8.5 13h4" /></svg>
+)

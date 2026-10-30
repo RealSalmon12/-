@@ -44,6 +44,10 @@ supabase functions deploy meals
 
 학생·반장·부반장이 홈의 **관리자 호출**로 선생님·반장·부반장에게 바로 알림을 보내요. 한 사람당 하루(한국 시간) 3번까지예요.
 
+### 반 채팅
+
+SQL Editor 에서 [`007_class_chat.sql`](supabase/migrations/007_class_chat.sql) 실행. 같은 반 멤버끼리 실시간으로 대화하고(Realtime), 본인 메시지는 본인이, 모든 메시지는 선생님·반장·부반장이 지울 수 있어요. 한 사람이 10초에 5개까지만 보낼 수 있어요.
+
 학교는 반마다 앱에서 검색해서 고르므로 학교 코드를 따로 넣을 필요가 없어요.
 대시보드에서 올린다면 **Edge Functions → meals → Code** 에 [`index.ts`](supabase/functions/meals/index.ts) 를 붙여넣고 Deploy 하면 돼요. 이 함수 하나가 급식, 시간표, 학사일정을 모두 처리해요.
 
