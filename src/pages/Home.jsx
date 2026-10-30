@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../supabase.js'
 import { useSession, ROLE_NAMES } from '../session.jsx'
 import { today, formatDate, addDays } from '../util.js'
-import { useMeals } from './Meals.jsx'
+import { useMeals, AllergyLegend } from './Meals.jsx'
 import Tray from '../components/Tray.jsx'
 import NeisCredit from '../components/NeisCredit.jsx'
 import MealRating from '../components/MealRating.jsx'
@@ -82,13 +82,12 @@ export default function Home() {
         </div>
       </header>
 
-      {timetable.data.length > 0 && (
-        <Link to="/timetable" className="today-strip" aria-label="오늘 시간표, 눌러서 이번 주 보기">
-          {[...timetable.data].sort((a, b) => a.period - b.period).map((r) => (
-            <span key={r.period}><b>{r.period}</b>{r.subject}</span>
-          ))}
-        </Link>
-      )}
+      <Link to="/timetable" className="today-strip" aria-label="오늘 시간표, 눌러서 이번 주 보기">
+        {[...timetable.data].sort((a, b) => a.period - b.period).map((r) => (
+          <span key={r.period}><b>{r.period}</b>{r.subject}</span>
+        ))}
+        <span className="today-strip-more">{timetable.data.length ? '이번 주 ›' : '이번 주 시간표 ›'}</span>
+      </Link>
 
       <DdayStrip />
 
@@ -117,7 +116,7 @@ export default function Home() {
 
       <section className="section">
         <div className="section-head">
-          <h2>오늘 급식</h2>
+          <h2>오늘 급식{shown?.calories && <span className="fine h2-note">{shown.calories.replace(' Kcal', ' kcal')}</span>}</h2>
           {meals.list.length > 1 && (
             <div className="toggle" role="tablist">
               {meals.list.map((m) => (
@@ -132,12 +131,15 @@ export default function Home() {
         {meals.loading ? <div className="tray tray-ghost" />
           : shown ? (
             <>
-              <Tray dishes={shown.dishes} />
+              <Tray dishes={shown.dishes} showAllergies />
               <MealRating date={t} type={shown.meal_type} />
-              {shown.calories && <p className="fine">{shown.calories.replace(' Kcal', ' kcal')}</p>}
             </>
           )
           : <p className="empty">오늘은 급식이 없어요.</p>}
+        <div className="meal-foot">
+          <AllergyLegend />
+          <Link className="more" to="/meals">다른 날 급식 ›</Link>
+        </div>
       </section>
 
       <section className="section">

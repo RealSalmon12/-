@@ -326,6 +326,10 @@ textarea { resize: vertical; line-height: 1.6; }
   border: 1px solid var(--rule); border-radius: 8px; background: var(--surface); font-size: 14px; white-space: nowrap;
 }
 .today-strip b { font-family: var(--font-display); font-weight: 400; color: var(--board); }
+.today-strip .today-strip-more { border-color: transparent; background: none; color: var(--board); font-weight: 500; }
+.h2-note { margin-left: 8px; font-family: var(--font-body); font-weight: 400; }
+.meal-foot { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.meal-foot .legend { flex: 1; }
 
 /* 달력: 학교 일정, 쉬는 날 */
 .day.off .num { color: var(--redpen); }
