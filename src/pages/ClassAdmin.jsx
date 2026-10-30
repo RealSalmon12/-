@@ -130,6 +130,7 @@ export default function ClassAdmin() {
           ))}
         </ul>
       </section>
+      <Link className="btn-text" to="/reports">채팅 신고함 보기</Link>
       <Link className="btn-text quiet" to="/account">내 계정 · 로그아웃 · 계정 초기화</Link>
     </div>
   )

@@ -4,6 +4,7 @@ import { supabase } from '../supabase.js'
 import { useSession } from '../session.jsx'
 import { useNeis } from '../neis.js'
 import { today, addDays, mondayOf, shortDate } from '../util.js'
+import NeisCredit from '../components/NeisCredit.jsx'
 
 const DAYS = ['월', '화', '수', '목', '금']
 const squash = (s) => s.replace(/\s/g, '')
@@ -75,6 +76,7 @@ export default function Timetable() {
           </div>
         )}
       <p className="fine">빨간 점이 있는 칸은 그날 그 과목 수행평가가 있다는 뜻이에요. 시간표는 NEIS에서 자동으로 불러와요.</p>
+      <NeisCredit what="시간표" />
     </div>
   )
 }

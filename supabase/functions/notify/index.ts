@@ -1,4 +1,5 @@
-// 공지와 1:1 채팅 알림: 앱이 글을 저장한 뒤 { kind: 'announcement' | 'dm', id } 로 부름.
+// 공지·1:1 채팅·@멘션·채팅 신고 알림: 앱이 글을 저장한 뒤 { kind, id } 로 부름.
+// kind: 'announcement' | 'dm' | 'mention' (반 채팅 메시지) | 'report' (채팅 신고)
 // 쓴 사람 본인만 부를 수 있고, 같은 글로는 한 번만 보냄 (notified_at).
 // 필요한 시크릿: VAPID_KEYS (remind 함수와 같은 값), VAPID_CONTACT (없어도 됨)
 import { createClient } from 'npm:@supabase/supabase-js@2'
@@ -46,7 +47,13 @@ async function push(userIds: string[], message: Record<string, string>, ttl: num
 
 async function notify(req: Request) {
   const { kind, id } = await req.json().catch(() => ({}))
-  const table = kind === 'announcement' ? 'announcements' : kind === 'dm' ? 'direct_messages' : null
+  const TABLES: Record<string, [string, string]> = {
+    announcement: ['announcements', 'user_id'],
+    dm: ['direct_messages', 'sender_id'],
+    mention: ['chat_messages', 'user_id'],
+    report: ['chat_reports', 'reporter_id']
+  }
+  const [table, author] = TABLES[kind] ?? []
   if (!table || !id) return json({ error: 'kind, id 가 필요해요' }, 400)
 
   // 부른 사람이 누구인지, 그 사람이 쓴 글인지 확인
@@ -57,7 +64,6 @@ async function notify(req: Request) {
   if (!user) return json({ error: 'login' }, 401)
 
   // 아직 안 보낸 글이면 보낸 표시를 먼저 남김 (동시에 두 번 불러도 한 번만 보냄)
-  const author = kind === 'announcement' ? 'user_id' : 'sender_id'
   const { data: row } = await admin.from(table).update({ notified_at: new Date().toISOString() })
     .eq('id', id).eq(author, user.id).is('notified_at', null).select('*').maybeSingle()
   if (!row) return json({ sent: 0 })
@@ -73,6 +79,31 @@ async function notify(req: Request) {
       body: cut(row.body || `${me?.display_name ?? '선생님'} 선생님의 공지예요.`, 140),
       url: '/announcements',
       tag: `announcement-${row.id}`
+    }, 24 * 3600)
+    return json({ sent })
+  }
+
+  if (kind === 'mention') {
+    // 같은 반에 있는 사람만, 나는 빼고
+    const ids = new Set((members ?? []).map((m) => m.user_id))
+    const to = (row.mentions ?? []).filter((u: string) => ids.has(u) && u !== user.id)
+    const sent = await push(to, {
+      title: `${me?.display_name ?? '친구'}님이 반 채팅에서 나를 불렀어요`,
+      body: cut(row.body || '사진', 140),
+      url: '/chat',
+      tag: `mention-${row.id}`
+    }, 12 * 3600)
+    return json({ sent })
+  }
+
+  if (kind === 'report') {
+    const teachers = (members ?? []).filter((m) => m.role === 'teacher').map((m) => m.user_id)
+    const target = members?.find((m) => m.user_id === row.reported_user)
+    const sent = await push(teachers, {
+      title: '반 채팅 신고가 들어왔어요',
+      body: cut(`${target?.display_name ?? '알 수 없음'}: ${row.body_snapshot || '사진'}`, 140),
+      url: '/reports',
+      tag: `report-${row.id}`
     }, 24 * 3600)
     return json({ sent })
   }

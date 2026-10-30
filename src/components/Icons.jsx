@@ -25,3 +25,6 @@ export const ChatIcon = () => (
 export const PhotoIcon = () => (
   <svg {...base}><rect x="3" y="5" width="18" height="14" rx="2.5" /><circle cx="9" cy="10" r="1.6" /><path d="m21 16-5-5-8 8" /></svg>
 )
+export const PollIcon = () => (
+  <svg {...base}><path d="M5 20V10M12 20V4M19 20v-7" /></svg>
+)

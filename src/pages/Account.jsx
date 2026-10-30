@@ -5,6 +5,7 @@ import { useSession, ROLE_NAMES } from '../session.jsx'
 import PushToggle from '../components/PushToggle.jsx'
 import ProfileEdit from '../components/ProfileEdit.jsx'
 import InstallHint from '../components/InstallHint.jsx'
+import BlockList from '../components/BlockList.jsx'
 
 export default function Account() {
   const { user, member, isTeacher, reloadMember } = useSession()
@@ -65,6 +66,7 @@ export default function Account() {
 
       <PushToggle />
       <InstallHint always />
+      <BlockList />
 
       <form className="section danger-zone" onSubmit={reset}>
         <h2>계정 초기화</h2>

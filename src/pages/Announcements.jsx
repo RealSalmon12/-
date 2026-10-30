@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase.js'
 import { useSession } from '../session.jsx'
 import { formatDate } from '../util.js'
+import { loadClassPeople } from '../chatMedia.js'
 
 const dayOf = (ts) => new Date(ts).toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' })
 const timeOf = (ts) => new Date(ts).toLocaleTimeString('ko-KR', { timeZone: 'Asia/Seoul', hour: 'numeric', minute: '2-digit' })
@@ -21,7 +22,7 @@ export function useAnnouncements(classId, limit = 50) {
 
 // 선생님 공지: 선생님이 쓰면 반 전체에 알림이 감
 export default function Announcements() {
-  const { member, isTeacher } = useSession()
+  const { user, member, isTeacher } = useSession()
   const navigate = useNavigate()
   const { items, error: loadError, reload } = useAnnouncements(member.class_id)
   const [title, setTitle] = useState('')
@@ -29,6 +30,28 @@ export default function Announcements() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+  const [reads, setReads] = useState({}) // 공지 id -> 읽은 사람 id 목록 (선생님만)
+  const [people, setPeople] = useState({})
+  const [open, setOpen] = useState(null)
+
+  // 이 화면을 열면 보이는 공지를 모두 읽음으로 남기고, 선생님은 누가 읽었는지 불러옴
+  useEffect(() => {
+    if (!items?.length) return
+    const ids = items.map((a) => a.id)
+    supabase.from('announcement_reads')
+      .upsert(ids.map((id) => ({ announcement_id: id, user_id: user.id })), { ignoreDuplicates: true })
+      .then(() => {
+        if (!isTeacher) return
+        supabase.from('announcement_reads').select('announcement_id, user_id').in('announcement_id', ids)
+          .then(({ data }) => {
+            const map = {}
+            for (const r of data ?? []) (map[r.announcement_id] ??= []).push(r.user_id)
+            setReads(map)
+          })
+      })
+  }, [items, isTeacher, user.id])
+  useEffect(() => { if (isTeacher) loadClassPeople(member.class_id).then(setPeople) }, [isTeacher, member.class_id])
+  const students = Object.values(people).filter((p) => p.role !== 'teacher')
 
   async function post(e) {
     e.preventDefault()
@@ -88,7 +111,25 @@ export default function Announcements() {
                   <span className="fine">{formatDate(dayOf(a.created_at))} {timeOf(a.created_at)}</span>
                 </div>
                 {a.body && <p className="prose">{a.body}</p>}
-                {isTeacher && <button className="btn-text danger self-start" onClick={() => remove(a)}>지우기</button>}
+                {isTeacher && (
+                  <div className="section-head">
+                    {students.length > 0 && (() => {
+                      const readBy = new Set(reads[a.id] ?? [])
+                      const unread = students.filter((p) => !readBy.has(p.user_id))
+                      return (
+                        <button className="btn-text" onClick={() => setOpen(open === a.id ? null : a.id)} aria-expanded={open === a.id}>
+                          읽음 {students.length - unread.length}/{students.length}
+                        </button>
+                      )
+                    })()}
+                    <button className="btn-text danger" onClick={() => remove(a)}>지우기</button>
+                  </div>
+                )}
+                {isTeacher && open === a.id && (
+                  <p className="fine read-list">
+                    안 읽은 학생: {students.filter((p) => !(reads[a.id] ?? []).includes(p.user_id)).map((p) => p.display_name).join(', ') || '없어요. 모두 읽었어요.'}
+                  </p>
+                )}
               </li>
             ))}
           </ul>

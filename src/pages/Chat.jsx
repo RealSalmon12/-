@@ -6,22 +6,31 @@ import { formatDate } from '../util.js'
 import { prepareImage, useChatUrls, loadClassPeople } from '../chatMedia.js'
 import Avatar from '../components/Avatar.jsx'
 import ChatTabs from '../components/ChatTabs.jsx'
-import { PhotoIcon } from '../components/Icons.jsx'
+import { PhotoIcon, PollIcon } from '../components/Icons.jsx'
+import { usePolls, PollCard, PollForm } from '../components/Poll.jsx'
+import { useUnread } from '../unread.jsx'
+import { mentionQuery, insertMention, findMentions, splitMentions } from '../mentions.js'
 
 const PAGE = 100
 const dayOf = (ts) => new Date(ts).toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' })
 const timeOf = (ts) => new Date(ts).toLocaleTimeString('ko-KR', { timeZone: 'Asia/Seoul', hour: 'numeric', minute: '2-digit' })
 const byId = (a, b) => a.id - b.id
-// DB 업데이트(008) 전이면 사진 칸 없이 읽음
-let COLS = 'id, user_id, body, image_path, created_at'
+// DB 업데이트(010, 008) 전이면 없는 칸을 빼고 읽음
+const COL_TRIES = [
+  'id, user_id, body, image_path, poll_id, mentions, created_at',
+  'id, user_id, body, image_path, created_at',
+  'id, user_id, body, created_at'
+]
+let COLS = COL_TRIES[0]
 async function fetchMessages(build) {
   let res = await build(supabase.from('chat_messages').select(COLS))
-  if (res.error && COLS.includes('image_path') && res.error.message.includes('image_path')) {
-    COLS = 'id, user_id, body, created_at'
+  while (res.error && /column|poll_id|mentions|image_path/.test(res.error.message) && COL_TRIES.indexOf(COLS) < COL_TRIES.length - 1) {
+    COLS = COL_TRIES[COL_TRIES.indexOf(COLS) + 1]
     res = await build(supabase.from('chat_messages').select(COLS))
   }
   return res
 }
+const NEED_010 = 'DB 업데이트(010_report_unread_poll_rating.sql)를 먼저 실행해 주세요.'
 
 // 반 채팅: 같은 반 멤버끼리. 새 메시지와 지운 메시지는 실시간으로 반영
 export default function Chat() {
@@ -34,7 +43,13 @@ export default function Chat() {
   const [picked, setPicked] = useState(null)
   const [zoom, setZoom] = useState(null)
   const [uploading, setUploading] = useState(false)
+  const [pollOpen, setPollOpen] = useState(false)
+  const [blocked, setBlocked] = useState(new Set())
+  const [caret, setCaret] = useState(0)
+  const [notice, setNotice] = useState('')
   const [error, setError] = useState('')
+  const textRef = useRef(null)
+  const { markRead } = useUnread()
   const listRef = useRef(null)
   const stickRef = useRef(true) // 맨 아래를 보고 있으면 새 메시지가 와도 따라 내려감
   const keepRef = useRef(null)  // 이전 메시지를 불러올 때 보던 위치 유지
@@ -71,6 +86,18 @@ export default function Chat() {
     return () => { supabase.removeChannel(channel) }
   }, [member.class_id, merge, loadPeople])
 
+  // 내가 차단한 사람
+  useEffect(() => {
+    supabase.from('user_blocks').select('blocked_id')
+      .then(({ data }) => setBlocked(new Set((data ?? []).map((b) => b.blocked_id))))
+  }, [])
+
+  // 보고 있는 마지막 메시지까지 읽음으로 남김
+  const lastId = messages?.at(-1)?.id
+  useEffect(() => { if (lastId) markRead('class', lastId) }, [lastId, markRead])
+
+  const { polls, votes, reloadVotes } = usePolls((messages ?? []).map((m) => m.poll_id))
+
   // 새로 들어온 친구의 이름을 모르면 멤버 목록을 다시 읽음
   const unknown = messages?.some((m) => !people[m.user_id])
   useEffect(() => { if (unknown && Object.keys(people).length) loadPeople() }, [unknown]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -100,6 +127,7 @@ export default function Chat() {
       .insert({ class_id: member.class_id, ...row }).select(COLS).single()
     if (error) {
       setError(error.message.includes('CHAT_TOO_FAST') ? '너무 빨리 보내고 있어요. 잠깐 뒤에 보내 주세요.'
+        : /poll_id|mentions/.test(error.message) ? NEED_010
         : error.message.includes('image_path') ? 'DB 업데이트(008_chat_photos_profile.sql)를 먼저 실행해 주세요.'
         : error.message.includes('chat_messages') ? 'DB 업데이트(007_class_chat.sql)를 먼저 실행해 주세요.'
         : '보내지 못했어요. 잠시 뒤 다시 해 주세요.')
@@ -107,6 +135,8 @@ export default function Chat() {
     }
     stickRef.current = true
     merge([data])
+    // @멘션된 사람에게 알림 (실패해도 메시지는 이미 저장됨)
+    if (data.mentions?.length) supabase.functions.invoke('notify', { body: { kind: 'mention', id: data.id } })
     return true
   }
 
@@ -116,8 +146,59 @@ export default function Chat() {
     if (!body || sending) return
     setSending(true)
     setError('')
-    if (await post({ body })) setText('')
+    const mentions = findMentions(body, people).filter((id) => id !== user.id)
+    if (await post(mentions.length ? { body, mentions } : { body })) setText('')
     setSending(false)
+  }
+
+  async function createPoll(question, options) {
+    setSending(true)
+    setError('')
+    const { data, error } = await supabase.from('polls')
+      .insert({ class_id: member.class_id, question, options }).select('id').single()
+    if (error) {
+      setSending(false)
+      return setError(error.message.includes('polls') ? NEED_010 : '투표를 만들지 못했어요.')
+    }
+    if (await post({ body: '', poll_id: data.id })) setPollOpen(false)
+    setSending(false)
+  }
+
+  async function report(m) {
+    const why = prompt('신고하는 이유를 적어 주세요 (선택). 선생님에게만 알려져요.', '')
+    if (why === null) return
+    const { data, error } = await supabase.rpc('report_message', { mid: m.id, why })
+    if (error) return setError(error.message.includes('report_message') ? NEED_010 : '신고하지 못했어요. 잠시 뒤 다시 해 주세요.')
+    supabase.functions.invoke('notify', { body: { kind: 'report', id: data } })
+    setPicked(null)
+    setZoom(null)
+    setNotice('신고했어요. 선생님에게 알렸어요.')
+  }
+
+  async function block(userId) {
+    const name = people[userId]?.display_name ?? '이 사람'
+    if (!confirm(`${name}님을 차단할까요? 내 화면에서만 메시지가 가려지고, 상대는 알 수 없어요. 내 계정에서 풀 수 있어요.`)) return
+    const { error } = await supabase.from('user_blocks').insert({ blocked_id: userId })
+    if (error && !error.message.includes('duplicate')) return setError(error.message.includes('user_blocks') ? NEED_010 : '차단하지 못했어요.')
+    setBlocked(new Set([...blocked, userId]))
+    setPicked(null)
+    setZoom(null)
+    setNotice(`${name}님을 차단했어요.`)
+  }
+
+  // @ 자동 완성 후보
+  const query = mentionQuery(text, caret)
+  const suggestions = query === null ? [] : Object.values(people)
+    .filter((p) => p.user_id !== user.id && p.display_name.includes(query))
+    .slice(0, 5)
+  function pickMention(p) {
+    const next = insertMention(text, caret, p.display_name)
+    setText(next.text)
+    setCaret(next.caret)
+    requestAnimationFrame(() => {
+      textRef.current?.focus()
+      textRef.current?.setSelectionRange(next.caret, next.caret)
+    })
   }
 
   async function sendPhoto(e) {
@@ -144,10 +225,11 @@ export default function Chat() {
   }
 
   async function remove(m) {
-    if (!confirm('이 메시지를 지울까요? 모두의 화면에서 사라져요.')) return
+    if (!confirm(m.poll_id ? '이 투표를 지울까요? 모두의 화면에서 사라져요.' : '이 메시지를 지울까요? 모두의 화면에서 사라져요.')) return
     const { error } = await supabase.from('chat_messages').delete().eq('id', m.id)
     if (error) return setError('지우지 못했어요.')
     if (m.image_path) await supabase.storage.from('chat').remove([m.image_path])
+    if (m.poll_id) await supabase.from('polls').delete().eq('id', m.poll_id)
     setPicked(null)
     setZoom(null)
     setMessages((list) => list.filter((x) => x.id !== m.id))
@@ -208,8 +290,16 @@ export default function Chat() {
                   )}
                 </p>
               )}
+              {blocked.has(r.m.user_id) ? (
+                <p className="chat-blocked fine">차단한 사람의 메시지예요.</p>
+              ) : (
               <div className="chat-line">
-                {r.m.image_path ? (
+                {r.m.poll_id ? (
+                  <>
+                    <PollCard poll={polls[r.m.poll_id]} votes={votes[r.m.poll_id]} mine={r.mine} people={people} onChanged={reloadVotes} />
+                    <button className="btn-text quiet chat-more" onClick={() => setPicked(picked === r.m.id ? null : r.m.id)} aria-label="더 보기">⋯</button>
+                  </>
+                ) : r.m.image_path ? (
                   <button className="chat-photo" onClick={() => setZoom(r.m)} aria-label="사진 크게 보기">
                     {url(r.m.image_path) && <img src={url(r.m.image_path)} alt="" loading="lazy"
                       onLoad={() => { if (stickRef.current) listRef.current.scrollTop = listRef.current.scrollHeight }} />}
@@ -217,30 +307,56 @@ export default function Chat() {
                 ) : (
                   <button className="chat-bubble" onClick={() => setPicked(picked === r.m.id ? null : r.m.id)}
                     aria-expanded={picked === r.m.id}>
-                    {r.m.body}
+                    {splitMentions(r.m.body, people).map((part, i) => part.name
+                      ? <b key={i} className={`mention${part.name === member.display_name ? ' me' : ''}`}>{part.text}</b>
+                      : part.text)}
                   </button>
                 )}
                 {r.last && <time className="chat-time">{timeOf(r.m.created_at)}</time>}
               </div>
-              {picked === r.m.id && (r.mine || canPost) && (
-                <button className="btn-text danger chat-delete" onClick={() => remove(r.m)}>
-                  {r.mine ? '지우기' : '관리자 권한으로 지우기'}
-                </button>
+              )}
+              {picked === r.m.id && (
+                <div className="chat-actions">
+                  {r.mine && <button className="btn-text danger" onClick={() => remove(r.m)}>지우기</button>}
+                  {!r.mine && <button className="btn-text danger" onClick={() => report(r.m)}>신고</button>}
+                  {!r.mine && !blocked.has(r.m.user_id) && <button className="btn-text quiet" onClick={() => block(r.m.user_id)}>차단</button>}
+                  {!r.mine && canPost && <button className="btn-text danger" onClick={() => remove(r.m)}>관리자 권한으로 지우기</button>}
+                </div>
               )}
             </div>
           </div>
         ))}
       </div>
 
+      {pollOpen && <PollForm busy={sending} onCreate={createPoll} onCancel={() => setPollOpen(false)} />}
       <form className="chat-compose" onSubmit={send}>
         {error && <p className="error" role="alert">{error}</p>}
+        {notice && <p className="call-sent" role="status" onClick={() => setNotice('')}>{notice}</p>}
+        {suggestions.length > 0 && (
+          <ul className="mention-list" role="listbox" aria-label="부를 사람">
+            {suggestions.map((p) => (
+              <li key={p.user_id}>
+                <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => pickMention(p)}>
+                  <Avatar url={url(p.avatar_path)} name={p.display_name} size={24} />
+                  {p.display_name}
+                  {p.role !== 'student' && <span className="chat-role">{ROLE_NAMES[p.role]}</span>}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
         <div className="chat-compose-row">
           <label className="chat-attach" aria-label="사진·짤 보내기">
             <PhotoIcon />
             <input type="file" accept="image/*" className="sr-only" onChange={sendPhoto} disabled={uploading} />
           </label>
-          <textarea value={text} onChange={(e) => setText(e.target.value)} rows={1} maxLength={500}
-            placeholder={uploading ? '사진 올리는 중…' : '메시지 보내기'} aria-label="메시지"
+          <button type="button" className="chat-attach" aria-label="투표 만들기" aria-pressed={pollOpen} onClick={() => setPollOpen(!pollOpen)}>
+            <PollIcon />
+          </button>
+          <textarea ref={textRef} value={text} rows={1} maxLength={500}
+            onChange={(e) => { setText(e.target.value); setCaret(e.target.selectionStart) }}
+            onSelect={(e) => setCaret(e.target.selectionStart)}
+            placeholder={uploading ? '사진 올리는 중…' : '메시지 (@로 친구 부르기)'} aria-label="메시지"
             onKeyDown={(e) => {
               // 한글 조합 중 Enter 는 글자 확정이므로 보내지 않음
               if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) send(e)
@@ -257,6 +373,7 @@ export default function Chat() {
             {(zoom.user_id === user.id || canPost) && (
               <button className="btn-chalk danger" onClick={() => remove(zoom)}>지우기</button>
             )}
+            {zoom.user_id !== user.id && <button className="btn-chalk danger" onClick={() => report(zoom)}>신고</button>}
           </div>
         </div>
       )}
