@@ -1,0 +1,254 @@
+// 리로스쿨 화면을 읽는 부분. 로그인한 세션으로 HTML 을 받아서 필요한 것만 뽑음.
+// 화면 구조는 2026-11 단대소고(dankook.riroschool.kr) 기준.
+import { parseHTML } from 'npm:linkedom@0.18.15'
+
+const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0 Safari/537.36'
+
+export type RiroFile = { name: string; url: string }
+export type RiroAssessment = {
+  id: string            // 리로스쿨 cate 번호
+  state: string         // 대기 / 제출 / 마감
+  year: number
+  subject: string
+  title: string
+  teacher: string
+  start: string         // 'YYYY-MM-DD HH:MM'
+  end: string
+  due: string           // 'YYYY-MM-DD' (자정 마감은 전날로)
+  url: string
+}
+export type RiroNotice = {
+  id: string            // 리로스쿨 uid
+  kind: string          // 알림 / 제출 ...
+  target: string
+  title: string
+  writer: string
+  date: string          // 'YYYY-MM-DD'
+  url: string
+}
+export type RiroDetail = { text: string; files: RiroFile[] }
+
+// Edge Function 에는 DOM 타입이 없어서 any 로 둠
+// deno-lint-ignore no-explicit-any
+const doc = (html: string): any => (parseHTML(html) as any).document
+const clean = (s: string | null | undefined) => (s ?? '').replace(/[\u00a0\u3000]/g, ' ').replace(/\s+/g, ' ').trim()
+
+// 본문 HTML 을 줄바꿈을 살린 글자로
+export function htmlToText(html: string) {
+  const marked = html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|li|tr|h[1-6]|blockquote)>/gi, '\n')
+  const text = doc(`<div id="x">${marked}</div>`).getElementById('x')?.textContent ?? ''
+  return text
+    .replace(/[\u00a0\u3000]/g, ' ')
+    .split('\n')
+    .map((l: string) => l.replace(/[ \t]+/g, ' ').trim())
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
+// 학년도 Y 의 'MM-DD' → 실제 연도 (3월~12월은 Y, 1~2월은 Y+1)
+function withYear(schoolYear: number, md: string) {
+  const [m] = md.split('-').map(Number)
+  return `${m >= 3 ? schoolYear : schoolYear + 1}-${md}`
+}
+
+// 교과 '기타'·'예체' 는 제목 앞 [과목명] 을 과목으로 씀
+function subjectOf(raw: string, title: string) {
+  if (!['기타', '예체', ''].includes(raw)) return raw
+  const m = title.match(/^\s*\[([^\]]+)\]/) ?? title.match(/^\s*\(([^)]+)\)/)
+  if (!m) return raw || '기타'
+  return m[1].replace(/^\s*\d학년\s*/, '').replace(/\(.*?\)/g, '').trim() || raw
+}
+
+// 수행평가 목록 (portfolio.php?db=...)
+export function parseAssessmentList(html: string, base: string): RiroAssessment[] {
+  const out: RiroAssessment[] = []
+  for (const tr of doc(html).querySelectorAll('.rd_board table tr')) {
+    const link = tr.querySelector('td.tit a.txt')
+    const tds = tr.querySelectorAll('td')
+    if (!link || tds.length < 8) continue
+    const href = link.getAttribute('href') ?? ''
+    const id = href.match(/[?&]cate=(\d+)/)?.[1]
+    if (!id) continue
+    // "2026년 1학년  국어  - 말하기 수행평가"
+    const full = clean(link.textContent)
+    const cut = full.indexOf(' - ')
+    const head = cut >= 0 ? full.slice(0, cut) : ''
+    const title = (cut >= 0 ? full.slice(cut + 3) : full).trim()
+    const year = Number(head.match(/(\d{4})년/)?.[1] ?? new Date().getFullYear())
+    const raw = head.replace(/\d{4}년/, '').replace(/(\d학년|전학년)/, '').trim()
+    const dates = [...tr.querySelectorAll('td.robo')].pop()?.innerHTML ?? ''
+    const md = [...dates.matchAll(/(\d{2}-\d{2}) (\d{2}:\d{2}):\d{2}/g)]
+    if (md.length < 2) continue
+    const start = `${withYear(year, md[0][1])} ${md[0][2]}`
+    const end = `${withYear(year, md[1][1])} ${md[1][2]}`
+    let due = end.slice(0, 10)
+    if (md[1][2] === '00:00') {
+      const d = new Date(`${due}T00:00:00Z`)
+      d.setUTCDate(d.getUTCDate() - 1)
+      due = d.toISOString().slice(0, 10)
+    }
+    out.push({
+      id,
+      state: clean(tr.querySelector('td.state')?.textContent),
+      year,
+      subject: subjectOf(raw, title),
+      title,
+      teacher: clean(tds[5]?.textContent),
+      start,
+      end,
+      due,
+      url: new URL(href, base).href
+    })
+  }
+  return out
+}
+
+// 다른 반 전용 과제는 뺌: 제목에 "(1-3)" 처럼 반이 적혀 있는데 우리 반이 아니면 false
+export function forClass(title: string, grade: number | null, classNo: number | null) {
+  const m = title.match(/\((\d)\s*-\s*(\d{1,2})\)/)
+  if (!m || !grade || !classNo) return true
+  return Number(m[1]) === grade && Number(m[2]) === classNo
+}
+
+// 수행평가 공지·첨부 (portfolio.php?action=write_form 이나 set_view)
+export function parseAssessmentDetail(html: string, base: string, db: string, cate: string): RiroDetail | null {
+  const d = doc(html)
+  const box = d.querySelector('.noti_box .txt_content') ?? d.querySelector('.txt_content')
+  const links = d.querySelectorAll('.attched_file a.btn_file, .write_file_list a.btn_file')
+  if (!box && !links.length) return null
+  const files: RiroFile[] = []
+  for (const a of links) {
+    // javascript:bL('down','00&num=1572',0,'67bb8e...')
+    const m = (a.getAttribute('href') ?? '').match(/bL\('down','([^']*)',(\d+),'([0-9a-f]+)'\)/)
+    if (!m) continue
+    const tip = a.querySelector('.ellipsisText')?.getAttribute('data-tooltip') ?? ''
+    const name = clean(tip.includes(' / ') ? tip.slice(tip.indexOf(' / ') + 3) : a.querySelector('.ellipsisText')?.textContent)
+    const q = `?club=index&action=down&db=${db}&page=1&cate=${cate}&cls=&my_cate=&sort=&uid=${m[1]}&file_num=${m[2]}&file_code=${m[3]}`
+    files.push({ name, url: new URL(`portfolio.php${q}`, base).href })
+  }
+  return { text: box ? htmlToText(box.innerHTML) : '', files }
+}
+
+// 가정통신문 목록 (board_msg.php?db=...)
+export function parseNoticeList(html: string, base: string, db: string): RiroNotice[] {
+  const out: RiroNotice[] = []
+  for (const tr of doc(html).querySelectorAll('.rd_board table tr')) {
+    const a = tr.querySelector('a[href^="javascript:bL(1,"]')
+    const tds = tr.querySelectorAll('td')
+    if (!a || tds.length < 8) continue
+    const id = (a.getAttribute('href') ?? '').match(/bL\(1,(\d+),/)?.[1]
+    const date = clean(tds[7].textContent).match(/\d{4}-\d{2}-\d{2}/)?.[0]
+    if (!id || !date) continue
+    out.push({
+      id,
+      kind: clean(tds[1].textContent),
+      target: clean(tds[2].textContent),
+      title: clean(a.textContent),
+      writer: clean(tds[5].textContent),
+      date,
+      url: new URL(`board_msg.php?club=index&action=view&db=${db}&uid=${id}`, base).href
+    })
+  }
+  return out
+}
+
+// 가정통신문 본문·첨부 (board_msg.php?action=view)
+export function parseNoticeDetail(html: string, base: string): RiroDetail & { posted: string | null } {
+  const d = doc(html)
+  const view = d.querySelector('.view_table')
+  const body = view?.querySelector('.ckeditor_view')
+  const files: RiroFile[] = []
+  for (const a of view?.querySelectorAll('a[href*="action=down"]') ?? []) {
+    const q = (a.getAttribute('href') ?? '').match(/'(\?[^']*action=down[^']*)'/)?.[1]
+    if (!q) continue
+    const name = clean(a.textContent).replace(/^\d+\.\s*/, '')
+    files.push({ name, url: new URL(`board_msg.php${q.replace(/&amp;/g, '&')}`, base).href })
+  }
+  const head = clean(view?.querySelector('.view_header_right')?.textContent)
+  const posted = head.match(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/)?.[0] ?? null
+  return { text: body ? htmlToText(body.innerHTML) : '', files, posted }
+}
+
+// ── 로그인 세션 ─────────────────────────────────────────────
+export class RiroSession {
+  private jar = new Map<string, string>()
+  constructor(readonly base: string) {}
+
+  private keep(res: Response) {
+    for (const c of res.headers.getSetCookie()) {
+      const [pair, ...attrs] = c.split(';')
+      const i = pair.indexOf('=')
+      const name = pair.slice(0, i).trim()
+      const value = pair.slice(i + 1).trim()
+      const expired = attrs.some((a) => /max-age=0\b/i.test(a)) || attrs.some((a) => {
+        const e = a.match(/expires=(.*)/i)?.[1]
+        return e ? new Date(e).getTime() < Date.now() : false
+      })
+      if (!value || value === 'deleted' || expired) this.jar.delete(name)
+      else this.jar.set(name, value)
+    }
+  }
+
+  async request(path: string, init: RequestInit = {}): Promise<Response> {
+    let url = new URL(path, this.base).href
+    let opts: RequestInit = init
+    for (let hop = 0; hop < 6; hop++) {
+      const headers = new Headers(opts.headers)
+      headers.set('User-Agent', UA)
+      headers.set('Referer', this.base)
+      if (this.jar.size) headers.set('Cookie', [...this.jar].map(([k, v]) => `${k}=${v}`).join('; '))
+      const res = await fetch(url, { ...opts, headers, redirect: 'manual', signal: AbortSignal.timeout(20_000) })
+      this.keep(res)
+      const loc = res.headers.get('location')
+      if (res.status >= 300 && res.status < 400 && loc) {
+        await res.body?.cancel()
+        url = new URL(loc, url).href
+        opts = { method: 'GET' }
+        continue
+      }
+      return res
+    }
+    throw new Error('리로스쿨이 너무 여러 번 다른 주소로 보냈어요')
+  }
+
+  async page(path: string) {
+    const res = await this.request(path)
+    const html = await res.text()
+    if (!res.ok) throw new Error(`리로스쿨 응답 ${res.status}`)
+    if (html.includes('signin_form')) throw new Error('리로스쿨 로그인이 풀렸어요')
+    return html
+  }
+
+  async login(id: string, pw: string) {
+    // 첫 화면에서 쿠키를 받아 둠
+    await (await this.request('user.php?action=signin')).body?.cancel()
+    const res = await this.request('ajax.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8', 'X-Requested-With': 'XMLHttpRequest' },
+      body: new URLSearchParams({ app: 'user', mode: 'login', userType: '1', id, pw, deeplink: '', redirect_link: '' })
+    })
+    const out = await res.json().catch(() => null)
+    if (out?.data?.otp == 1) throw new LoginError('리로스쿨 계정에 2단계 인증(OTP)이 켜져 있어 자동 로그인을 할 수 없어요')
+    if (out?.code !== '000') {
+      const msg = String(out?.msg ?? '').replace(/\\r|\\n|\r|\n/g, ' ').trim()
+      throw new LoginError(`리로스쿨 로그인 실패${msg ? `: ${msg}` : ''}`)
+    }
+    if (out?.data?.url) await (await this.request(out.data.url)).body?.cancel()
+  }
+
+  async download(url: string) {
+    const res = await this.request(url)
+    if (!res.ok) throw new Error(`첨부 받기 실패 ${res.status}`)
+    const type = res.headers.get('content-type') ?? ''
+    if (type.includes('text/html')) {
+      await res.body?.cancel()
+      throw new Error('첨부 대신 화면이 왔어요')
+    }
+    return new Uint8Array(await res.arrayBuffer())
+  }
+}
+
+export class LoginError extends Error {}
