@@ -18,12 +18,12 @@ export default function Login() {
         <div className="floe-bob">
           <Baco className="floe-baco" size={224} />
           <svg className="floe-ice" viewBox="0 0 320 70" preserveAspectRatio="none">
-            <path d="M14 22L46 8L118 12L170 4L238 10L300 18L310 30L6 30Z" fill="#fbfeff" />
-            <path d="M6 30L310 30L296 52L218 64L120 60L36 50Z" fill="#b9dbe7" />
+            <path d="M14 22L46 8L118 12L170 4L238 10L300 18L310 30L6 30Z" fill="#fffdf9" />
+            <path d="M6 30L310 30L296 52L218 64L120 60L36 50Z" fill="#e6d4c4" />
           </svg>
         </div>
         <svg className="floe-wave" viewBox="0 0 400 24" preserveAspectRatio="none">
-          <path d="M0 12C34 2 66 2 100 12S166 22 200 12S266 2 300 12S366 22 400 12V24H0Z" fill="#17435a" />
+          <path d="M0 12C34 2 66 2 100 12S166 22 200 12S266 2 300 12S366 22 400 12V24H0Z" fill="#5b3a2e" />
         </svg>
       </div>
       <div className="floe-sea">

@@ -1,9 +1,9 @@
-// 계절 테마: 이 기기에만 저장. 기본은 겨울(북극 바다)
+// 계절 테마: 이 기기에만 저장. 기본은 겨울(포근한 눈)
 export const SEASONS = [
   { id: 'spring', name: '봄', note: '벚꽃', color: '#b0476b' },
   { id: 'summer', name: '여름', note: '푸른 잎', color: '#2f7a45' },
   { id: 'autumn', name: '가을', note: '단풍', color: '#a4471f' },
-  { id: 'winter', name: '겨울', note: '북극 바다', color: '#17435a' }
+  { id: 'winter', name: '겨울', note: '포근한 눈', color: '#5b3a2e' }
 ]
 const KEY = 'bacoclass-season'
 

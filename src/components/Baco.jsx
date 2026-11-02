@@ -1,4 +1,4 @@
-// 바코: BacoClass 의 바다코끼리 캐릭터 (로그인 화면, 아이콘과 같은 모양)
+// 바코: BacoClass 의 바다코끼리 캐릭터 (로그인 화면, 아이콘과 같은 모양). 겨울이라 목도리를 둘렀음
 export default function Baco({ size = 160, className = '', title }) {
   return (
     <svg className={className} viewBox="0 0 240 210" width={size} height={size * 210 / 240}
@@ -14,6 +14,10 @@ export default function Baco({ size = 160, className = '', title }) {
       <circle cx="144" cy="59" r="2" fill="#fff" />
       <ellipse cx="84" cy="80" rx="8" ry="5" fill="#e98f86" opacity=".55" />
       <ellipse cx="156" cy="80" rx="8" ry="5" fill="#e98f86" opacity=".55" />
+      <path d="M68 114Q120 138 172 114L174 130Q120 156 66 130Z" fill="#c4443f" />
+      <path d="M72 121Q120 144 168 121" stroke="#f3dcc6" strokeWidth="3" fill="none" strokeDasharray="7 6" />
+      <path d="M78 126L72 168Q84 172 94 168L96 132Z" fill="#b23b37" />
+      <path d="M73 160Q83 164 93 160M74 150Q84 154 94 150" stroke="#f3dcc6" strokeWidth="3" fill="none" />
       <g fill="#f6ecd4" stroke="#7c5444" strokeWidth="2" strokeLinejoin="round">
         <path d="M106 100C104 120 100 138 98 150C97 155 103 156 104 151C108 136 112 118 114 102Z" />
         <path d="M134 100C136 120 140 138 142 150C143 155 137 156 136 151C132 136 128 118 126 102Z" />

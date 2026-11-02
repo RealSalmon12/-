@@ -1,12 +1,12 @@
-/* BacoClass: 북극 바다 + 얼음 공책 + 스테인리스 식판, 캐릭터는 바다코끼리 바코 */
+/* BacoClass: 포근한 겨울(눈 + 코코아) + 공책 + 스테인리스 식판, 캐릭터는 목도리 두른 바다코끼리 바코 */
 :root {
-  --paper: #eff5f7;        /* 얼음빛 공책 바탕 */
-  --surface: #fbfdfe;
-  --rule: #d2dee4;         /* 공책 줄 */
-  --ink: #15242c;
-  --ink-soft: #5a6b74;
-  --board: #17435a;        /* 북극 바다 (예전 칠판 자리) */
-  --board-ink: #eef6f8;    /* 얼음 */
+  --paper: #f4ede6;        /* 따뜻한 눈빛 공책 바탕 */
+  --surface: #fffaf5;
+  --rule: #e4d8cc;         /* 공책 줄 */
+  --ink: #2a201b;
+  --ink-soft: #76675d;
+  --board: #5b3a2e;        /* 코코아 (예전 칠판 자리) */
+  --board-ink: #fbf1e8;    /* 우유 거품 */
   --highlight: #ffe45c;    /* 형광펜 */
   --redpen: #c93c27;       /* 빨간펜 */
   --steel-1: #dfe4e6;      /* 식판 */
@@ -26,13 +26,13 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --paper: #0f1d24;
-    --surface: #15262f;
-    --rule: #26404c;
-    --ink: #e6eff2;
-    --ink-soft: #93a6ae;
-    --board: #8cc6da;
-    --board-ink: #0c2330;
+    --paper: #1b1613;
+    --surface: #241d19;
+    --rule: #3c3029;
+    --ink: #f3eae2;
+    --ink-soft: #b3a396;
+    --board: #e3b597;
+    --board-ink: #2b1810;
     --highlight: #8a7a1c;
     --redpen: #ff8a73;
     --steel-1: #44505a;
@@ -238,7 +238,7 @@ textarea { resize: vertical; line-height: 1.6; }
   position: fixed; right: 16px; bottom: calc(80px + env(safe-area-inset-bottom)); z-index: 5;
   display: inline-flex; align-items: center; gap: 6px; height: 50px; padding: 0 18px 0 14px;
   border-radius: 999px; background: var(--board); color: var(--board-ink); font-weight: 600;
-  box-shadow: 0 8px 18px -6px rgb(14 46 62 / 0.55);
+  box-shadow: 0 8px 18px -6px rgb(60 36 28 / 0.5);
 }
 
 /* 하단 탭 */
@@ -260,19 +260,27 @@ textarea { resize: vertical; line-height: 1.6; }
 /* 로그인: 칠판 */
 .floe-page {
   min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column;
-  background: linear-gradient(#dcedf3, #eef7fa 70%); color: #17435a;
+  background:
+    radial-gradient(2.5px 2.5px at 6% 10%, #fff 98%, transparent),
+    radial-gradient(2px 2px at 78% 12%, #fff 98%, transparent),
+    radial-gradient(3px 3px at 64% 34%, #fff 98%, transparent),
+    radial-gradient(2px 2px at 30% 46%, #fff 98%, transparent),
+    radial-gradient(2.5px 2.5px at 88% 52%, #fff 98%, transparent),
+    radial-gradient(2px 2px at 8% 62%, #fff 98%, transparent),
+    linear-gradient(#ecdccf, #f7efe8 72%);
+  color: #5b3a2e;
 }
 .floe-sky { padding: 16vh 28px 0; max-width: 560px; }
-.floe-title { font-size: clamp(52px, 15vw, 76px); line-height: 1; letter-spacing: -0.01em; color: #17435a; }
-.floe-sub { margin-top: 14px; font-size: 17px; line-height: 1.7; color: #3f6474; }
-/* 얼음 위에 앉은 바코. 화면 아래 바다로 이어짐 */
+.floe-title { font-size: clamp(52px, 15vw, 76px); line-height: 1; letter-spacing: -0.01em; color: #5b3a2e; }
+.floe-sub { margin-top: 14px; font-size: 17px; line-height: 1.7; color: #7a5c4e; }
+/* 눈 더미 위에 앉은 바코. 화면 아래 코코아빛 담요로 이어짐 */
 .floe-scene { position: relative; margin-top: auto; min-height: 270px; flex: none; }
 .floe-bob { position: absolute; left: 50%; bottom: 4px; width: 320px; margin-left: -150px; }
 .floe-baco { display: block; margin: 0 auto -20px; position: relative; z-index: 1; }
 .floe-ice { display: block; width: 100%; height: 56px; }
 .floe-wave { position: absolute; left: 0; right: 0; bottom: -1px; width: 100%; height: 24px; z-index: 2; }
 .floe-sea {
-  background: #17435a; color: #eef6f8;
+  background: #5b3a2e; color: #fbf1e8;
   padding: 18px 24px calc(28px + env(safe-area-inset-bottom));
   display: flex; flex-direction: column; gap: 12px;
 }
@@ -281,8 +289,8 @@ textarea { resize: vertical; line-height: 1.6; }
 .floe-note a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
 .btn-ice {
   min-height: 52px; padding: 0 20px; border: none; border-radius: 14px;
-  background: #fbfeff; color: #17435a; font-weight: 600; font-size: 17px;
-  box-shadow: 0 3px 0 #b9dbe7;
+  background: #fffaf5; color: #5b3a2e; font-weight: 600; font-size: 17px;
+  box-shadow: 0 3px 0 #d9c3b1;
 }
 .floe-page :focus-visible { outline-color: var(--highlight); }
 @media (prefers-reduced-motion: no-preference) {
@@ -293,7 +301,7 @@ textarea { resize: vertical; line-height: 1.6; }
 /* 사진 크게 보기 위의 버튼 */
 .btn-chalk {
   min-height: 52px; padding: 0 20px; border: none; border-radius: 12px;
-  background: #eef6f8; color: #17435a; font-weight: 600; font-size: 17px;
+  background: #fbf1e8; color: #5b3a2e; font-weight: 600; font-size: 17px;
   display: inline-flex; align-items: center; justify-content: center;
 }
 
@@ -675,4 +683,4 @@ button.attach-file { cursor: pointer; }
 .season-spring { --s-board: #b0476b; --s-paper: #f8d9e2; }
 .season-summer { --s-board: #2f7a45; --s-paper: #cfe8c7; }
 .season-autumn { --s-board: #a4471f; --s-paper: #f2cf9e; }
-.season-winter { --s-board: #17435a; --s-paper: #d6eaf1; }
+.season-winter { --s-board: #5b3a2e; --s-paper: #f1e2d4; }
