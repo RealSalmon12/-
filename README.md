@@ -63,6 +63,17 @@ supabase functions deploy meals
 1. SQL Editor 에서 [`011_submissions_dday.sql`](supabase/migrations/011_submissions_dday.sql) 실행
 2. `supabase functions deploy notify` (안 낸 학생 알림)
 
+### 리로스쿨 자동 가져오기 (선택)
+
+리로스쿨 계정으로 하루 세 번(7:00, 12:40, 17:00) 로그인해서, 아직 안 끝난 수행평가와 새 가정통신문을 첨부까지 가져와 반에 올리고 알림을 보내요. 반에서 지운 글은 다시 가져오지 않아요.
+
+1. **Edge Functions → Secrets** 에 `RIRO_ID`, `RIRO_PW` (리로스쿨 아이디·비밀번호) 추가. 다른 학교라면 `RIRO_BASE` (예: `https://xxx.riroschool.kr/`)도
+2. 함수 `riro-sync` 배포: [`index.ts`](supabase/functions/riro-sync/index.ts), [`riro.ts`](supabase/functions/riro-sync/riro.ts) 두 파일
+3. SQL Editor 에서 [`013_riro_sync.sql`](supabase/migrations/013_riro_sync.sql) 의 `<ANON_KEY>`, `<초대코드>`, `<내 구글 이메일>` 을 바꿔서 실행
+4. 앱의 **반 관리 → 리로스쿨 자동 가져오기 → 지금 가져오기** 로 확인
+
+비밀번호는 시크릿에만 있고 DB·앱에는 없어요. 로그인에 실패하면 같은 비밀번호로는 자동으로 다시 시도하지 않아요(계정 잠금 방지). 리로스쿨에 2단계 인증(OTP)이 켜져 있으면 쓸 수 없어요.
+
 ### 반 채팅
 
 SQL Editor 에서 [`007_class_chat.sql`](supabase/migrations/007_class_chat.sql) 실행. 같은 반 멤버끼리 실시간으로 대화하고(Realtime), 본인 메시지는 본인이, 모든 메시지는 선생님·반장·부반장이 지울 수 있어요. 한 사람이 10초에 5개까지만 보낼 수 있어요.

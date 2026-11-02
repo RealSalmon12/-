@@ -41,10 +41,13 @@ export default function Notices() {
               <span className="sheet">
                 {thumbs[n.id] && <img src={thumbs[n.id]} alt="" />}
                 {n.photo_paths.length > 1 && <span className="sheet-count">{n.photo_paths.length}장</span>}
+                {!n.photo_paths.length && n.attachments?.length > 0 && (
+                  <span className="sheet-ext">{n.attachments[0].name.split('.').pop().toUpperCase()}</span>
+                )}
               </span>
               <span className="notice-body">
                 <span className="notice-title">{n.title}</span>
-                <span className="fine">{formatDate(n.created_at.slice(0, 10))}에 올림</span>
+                <span className="fine">{formatDate(n.created_at.slice(0, 10))}에 올림{n.source === 'riro' && ' · 리로스쿨'}</span>
                 {n.due_date && <span className="deadline">{formatDate(n.due_date)}까지 제출</span>}
               </span>
             </Link>

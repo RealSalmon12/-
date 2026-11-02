@@ -4,6 +4,7 @@ import { supabase } from '../supabase.js'
 import { useSession, ROLE_NAMES } from '../session.jsx'
 import SchoolPicker, { gradesFor } from '../components/SchoolPicker.jsx'
 import { useCallLimit } from './Calls.jsx'
+import RiroSync from '../components/RiroSync.jsx'
 
 export default function ClassAdmin() {
   const { member, isTeacher, reloadMember } = useSession()
@@ -74,6 +75,7 @@ export default function ClassAdmin() {
         <span className="code">{member.classes.invite_code}</span>
         <button className="btn-text" onClick={resetCode}>코드 새로 만들기</button>
       </section>
+      <RiroSync classId={member.class_id} />
       <form className="section" onSubmit={saveClass}>
         <h2>학교와 반</h2>
         <p className="fine">급식, 시간표, 학교 일정을 NEIS에서 불러올 때 써요.</p>

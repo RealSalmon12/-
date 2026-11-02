@@ -3,6 +3,7 @@ import { supabase } from '../supabase.js'
 import { compressImage } from '../util.js'
 
 const BUCKET = 'assessments'
+const DEFAULT_BUCKET = BUCKET
 export const MAX_FILES = 10
 const MAX_BYTES = 20 * 1024 * 1024
 
@@ -111,28 +112,29 @@ export function AttachPicker({ items, onChange, onError }) {
 }
 
 // 비공개 버킷이라 한 시간짜리 주소를 받아서 씀
-function useUrls(paths) {
+function useUrls(paths, bucket = DEFAULT_BUCKET) {
   const [urls, setUrls] = useState({})
   const key = paths.join('|')
   useEffect(() => {
     if (!paths.length) return
-    supabase.storage.from(BUCKET).createSignedUrls(paths, 3600)
+    supabase.storage.from(bucket).createSignedUrls(paths, 3600)
       .then(({ data }) => setUrls(Object.fromEntries((data ?? []).filter((d) => d.signedUrl).map((d) => [d.path, d.signedUrl]))))
-  }, [key]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [key, bucket]) // eslint-disable-line react-hooks/exhaustive-deps
   return urls
 }
 
 // 상세 화면: 사진은 크게 보기, 파일은 원래 이름으로 내려받기
-export function AttachmentView({ items }) {
+// bucket: 수행평가는 'assessments', 가정통신문(리로스쿨에서 가져온 PDF 등)은 'notices'
+export function AttachmentView({ items, bucket = DEFAULT_BUCKET }) {
   const photos = items.filter(isImage)
   const files = items.filter((a) => !isImage(a))
-  const url = useUrls(photos.map((a) => a.path))
+  const url = useUrls(photos.map((a) => a.path), bucket)
   const [zoom, setZoom] = useState(null)
   const [error, setError] = useState('')
 
   async function download(a) {
     setError('')
-    const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(a.path, 300, { download: a.name })
+    const { data, error } = await supabase.storage.from(bucket).createSignedUrl(a.path, 300, { download: a.name })
     if (error) return setError('파일을 열지 못했어요. 잠시 뒤 다시 해 주세요.')
     location.href = data.signedUrl
   }

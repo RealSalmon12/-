@@ -7,6 +7,7 @@ import { DueMark } from '../components/DueList.jsx'
 import { useDone } from '../done.js'
 import { downloadIcs } from '../ics.js'
 import { AttachmentView, removeFiles } from '../components/Attachments.jsx'
+import RiroLink from '../components/RiroLink.jsx'
 
 export default function AssessmentDetail() {
   const { id } = useParams()
@@ -34,6 +35,7 @@ export default function AssessmentDetail() {
       <header className="detail-head">
         <h1>{a.title}</h1>
         <p className="detail-due"><DueMark date={a.due_date} done={done.has(a.id)} /> {formatDate(a.due_date)}</p>
+        <RiroLink item={a} />
       </header>
       <dl className="facts">
         <div><dt>과목</dt><dd>{a.subject}</dd></div>
