@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../supabase.js'
 import { useSession } from '../session.jsx'
 import { useNeis } from '../neis.js'
-import { today, addDays, mondayOf, shortDate } from '../util.js'
+import { addDays, mondayOf, shortDate, useToday } from '../util.js'
 import NeisCredit from '../components/NeisCredit.jsx'
 
 const DAYS = ['월', '화', '수', '목', '금']
@@ -34,11 +34,14 @@ export function NeedsClassNumber() {
 
 export default function Timetable() {
   const { member } = useSession()
-  const [monday, setMonday] = useState(mondayOf(today()))
+  const t = useToday()
+  const [monday, setMonday] = useState(mondayOf(t))
   const friday = addDays(monday, 4)
   const { ready, loading, data, error } = useTimetable(monday, friday)
   const [due, setDue] = useState([])
-  const t = today()
+
+  // 날이 바뀌면 이번 주로 돌아옴 (월요일 아침엔 새 주 시간표가 바로 보이게)
+  useEffect(() => { setMonday(mondayOf(t)) }, [t])
 
   useEffect(() => {
     supabase.from('assessments').select('id, subject, title, due_date')
@@ -55,7 +58,7 @@ export default function Timetable() {
       <header className="page-head"><h1>시간표</h1></header>
       <div className="stepper">
         <button className="step" onClick={() => setMonday(addDays(monday, -7))} aria-label="지난주">‹</button>
-        <button className="btn-text" onClick={() => setMonday(mondayOf(today()))}>
+        <button className="btn-text" onClick={() => setMonday(mondayOf(t))}>
           {shortDate(monday)} ~ {shortDate(friday)}{monday === mondayOf(t) && ' 이번 주'}
         </button>
         <button className="step" onClick={() => setMonday(addDays(monday, 7))} aria-label="다음 주">›</button>
@@ -75,7 +78,7 @@ export default function Timetable() {
             ))}
           </div>
         )}
-      <p className="fine">빨간 점이 있는 칸은 그날 그 과목 수행평가가 있다는 뜻이에요. 시간표는 NEIS에서 자동으로 불러와요.</p>
+      <p className="fine">빨간 점이 있는 칸은 그날 그 과목 수행평가가 있다는 뜻이에요. 시간표는 NEIS에서 자동으로 불러오고, 매일 아침 새로 받아와요.</p>
       <NeisCredit what="시간표" />
     </div>
   )

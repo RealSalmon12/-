@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase.js'
 import { useSession } from './session.jsx'
+import { useToday } from './util.js'
 
 // 우리 반 학교 정보를 함수에 넘길 모양으로
 function schoolOf(classes) {
@@ -14,6 +15,8 @@ export function useNeis(type, params, enabled = true) {
   const [state, setState] = useState({ loading: true, data: [], error: '' })
   const body = { ...schoolOf(member?.classes), ...params }
   const key = JSON.stringify(body)
+  // 날이 바뀌면(다음 날 아침 앱을 다시 열면) 같은 범위라도 다시 불러옴
+  const day = useToday()
   useEffect(() => {
     if (!enabled) return setState({ loading: false, data: [], error: '' })
     let alive = true
@@ -31,7 +34,7 @@ export function useNeis(type, params, enabled = true) {
       setState({ loading: false, data: Array.isArray(data) ? data.filter(valid) : [], error: message })
     })
     return () => { alive = false }
-  }, [type, key, enabled])
+  }, [type, key, enabled, day])
   return state
 }
 

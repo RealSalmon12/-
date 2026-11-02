@@ -1,8 +1,27 @@
+import { useEffect, useState } from 'react'
+
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
 
 // 한국 시간 기준 오늘 'YYYY-MM-DD'
 export function today() {
   return new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' })
+}
+
+// 오늘 날짜를 state 로: 앱을 켜 둔 채 날이 바뀌거나, 다음 날 아침 다시 열면 새 날짜로 바뀜
+export function useToday() {
+  const [day, setDay] = useState(today)
+  useEffect(() => {
+    const check = () => setDay(today())
+    const timer = setInterval(check, 60_000)
+    document.addEventListener('visibilitychange', check)
+    window.addEventListener('focus', check)
+    return () => {
+      clearInterval(timer)
+      document.removeEventListener('visibilitychange', check)
+      window.removeEventListener('focus', check)
+    }
+  }, [])
+  return day
 }
 
 export function addDays(iso, n) {
