@@ -109,13 +109,17 @@ async function cached<T>(cacheKey: string, load: () => Promise<T>, fresh = isFre
 async function timetable(from: string, to: string, grade: number, classNo: number, sc: School) {
   if (!grade || !classNo) throw new Error('반 관리에서 학년과 반 번호를 먼저 정해 주세요')
   // 이번 주면 컴시간알리미 먼저. 학교를 못 찾거나 사이트가 바뀌어 실패하면 아래 NEIS 로
+  let why = ''
   try {
     const rows = await comciTimetable(from, to, grade, classNo, sc)
     if (rows) return rows
   } catch (e) {
-    console.error('컴시간알리미 실패, NEIS 로 대신함:', (e as Error).message)
+    why = String((e as Error).message ?? e)
+    console.error('컴시간알리미 실패, NEIS 로 대신함:', why)
   }
-  return neisTimetable(from, to, grade, classNo, sc)
+  // 화면에 어디서 가져왔는지(그리고 컴시간알리미가 왜 안 됐는지) 보여줄 수 있게 붙여 둠
+  const rows = await neisTimetable(from, to, grade, classNo, sc)
+  return rows.map((r: Record<string, unknown>) => ({ ...r, src: 'neis', why }))
 }
 
 function neisTimetable(from: string, to: string, grade: number, classNo: number, sc: School) {
@@ -177,24 +181,40 @@ async function comciJson(path: string) {
 
 const squash = (s: string) => s.replace(/\s/g, '')
 
+// 학교 이름 비교용: 띄어쓰기 빼고, 컴시간알리미가 자주 쓰는 줄임말로 맞춤
+// 예) 단국대학교부속소프트웨어고등학교 → 단국대부속소프트웨어고
+const normName = (s: string) => squash(s)
+  .replace(/고등학교$/, '고').replace(/중학교$/, '중').replace(/초등학교$/, '초').replace(/학교$/, '')
+  .replace(/대학교/g, '대').replace(/사범대학/g, '사대').replace(/부설/g, '부속').replace(/부속/g, '부')
+
+async function comciSearch(q: string) {
+  const r = await getComciRoutes()
+  const encoded = [...iconv.encode(q, 'euc-kr')].map((b) => '%' + b.toString(16).padStart(2, '0')).join('')
+  const { 학교검색: list = [] } = await comciJson(`${r.main}?${r.search}l${encoded}`) as { 학교검색?: [number, string, string, number][] }
+  return list
+}
+
 // NEIS 학교 이름으로 컴시간알리미 학교 코드를 찾음 (한 번 찾으면 저장해 둠)
-async function comciSchoolCode(name: string): Promise<number | null> {
-  const cacheKey = `comci-school:${name}`
+async function comciSchoolCode(name: string): Promise<number> {
+  const cacheKey = `comci-school2:${name}`
   const { data } = await admin.from('neis_cache').select('*').eq('key', cacheKey).maybeSingle()
   if (data?.data?.code) return data.data.code
-  const r = await getComciRoutes()
-  const short = name.replace(/(고등|중|초등)학교$/, (m) => ({ 고등학교: '고', 중학교: '중', 초등학교: '초' } as Record<string, string>)[m])
-  for (const q of [name, short]) {
-    const encoded = [...iconv.encode(q, 'euc-kr')].map((b) => '%' + b.toString(16).padStart(2, '0')).join('')
-    const { 학교검색: list = [] } = await comciJson(`${r.main}?${r.search}l${encoded}`) as { 학교검색?: [number, string, string, number][] }
-    const hit = list.find((s) => squash(s[2]) === squash(name)) ?? list.find((s) => squash(s[2]) === squash(short))
-      ?? (list.length === 1 ? list[0] : undefined)
+  const want = normName(name)
+  const plain = squash(name)
+  // 긴 이름은 컴시간알리미에 줄임말로 있어서 검색이 안 될 수 있으니 점점 짧게 검색
+  const queries = [...new Set([plain, want, plain.slice(0, 4), plain.slice(0, 2)])].filter((q) => q.length >= 2)
+  const seen: string[] = []
+  for (const q of queries) {
+    const list = await comciSearch(q)
+    seen.push(...list.map((x) => x[2]))
+    const hit = list.find((x) => normName(x[2]) === want)
+      ?? list.find((x) => { const n = normName(x[2]); return n.length >= 3 && (want.includes(n) || n.includes(want)) })
     if (hit) {
       await admin.from('neis_cache').upsert({ key: cacheKey, data: { code: hit[3], name: hit[2] }, fetched_at: new Date().toISOString() })
       return hit[3]
     }
   }
-  return null
+  throw new Error(`컴시간알리미에서 '${name}' 학교를 못 찾음${seen.length ? ` (검색 결과: ${[...new Set(seen)].slice(0, 5).join(', ')})` : ''}`)
 }
 
 function kstToday() {
@@ -213,11 +233,10 @@ async function comciTimetable(from: string, to: string, grade: number, classNo: 
   if (dow === 0 || dow === 6) return null
   const monday = addDaysIso(t, 1 - dow)
   if (from < monday || to > addDaysIso(monday, 4)) return null
-  if (!sc.name) return null
+  if (!sc.name) throw new Error('학교 이름이 없음')
   const code = await comciSchoolCode(sc.name)
-  if (!code) return null
 
-  const week = await cached(`comci:${code}:${grade}-${classNo}:${monday}`, async () => {
+  const week = await cached(`comci2:${code}:${grade}-${classNo}:${monday}`, async () => {
     const r = await getComciRoutes()
     const data = await comciJson(`${r.main}_T?${btoa(`${r.timetable}_${code}_0_1`)}`)
     const teachers = data[`자료${r.teacher}`] as string[]
@@ -230,9 +249,10 @@ async function comciTimetable(from: string, to: string, grade: number, classNo: 
     const split = Number(data['분리']) || 0
     const fallback = 10 ** (Math.floor(Math.log10(Math.max(teachers?.length ?? 2, 2) - 1)) + 2)
     const subjectNo = (v: number) => split === 100 ? v % 100 : Math.floor(v / (split || fallback))
+    const teacherNo = (v: number) => split === 100 ? Math.floor(v / 100) : v % (split || fallback / 10)
     const days = now[grade]?.[classNo] ?? []
     const orig = original?.[grade]?.[classNo] ?? []
-    const rows: { date: string; period: number; subject: string; changed?: boolean }[] = []
+    const rows: { date: string; period: number; subject: string; teacher: string; changed: boolean; src: string }[] = []
     for (let d = 1; d <= 5; d++) {
       const periods = days[d] ?? []
       for (let p = 1; p < periods.length; p++) {
@@ -240,7 +260,8 @@ async function comciTimetable(from: string, to: string, grade: number, classNo: 
         if (!v) continue
         const subject = String(subjects[subjectNo(v)] ?? '').trim()
         if (!subject) continue
-        rows.push({ date: addDaysIso(monday, d - 1), period: p, subject, changed: !!orig[d] && orig[d][p] !== v })
+        const teacher = String(teachers?.[teacherNo(v)] ?? '').replace(/\*$/, '').trim()
+        rows.push({ date: addDaysIso(monday, d - 1), period: p, subject, teacher, changed: !!orig[d] && orig[d][p] !== v, src: 'comci' })
       }
     }
     if (!rows.length) throw new Error('컴시간알리미에 이 반 시간표가 없음')
