@@ -6,7 +6,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import * as webpush from 'jsr:@negrel/webpush@0.5.0'
 import {
-  forClass, LoginError, parseAssessmentDetail, parseAssessmentList, parseNoticeDetail, parseNoticeList,
+  forClass, LoginError, parseAssessmentDetail, parseAssessmentList, parseNoticeDetail, parseNoticeList, parseTargetClasses,
   type RiroDetail, type RiroFile, RiroSession
 } from './riro.ts'
 
@@ -45,24 +45,48 @@ async function fingerprint(...parts: string[]) {
   return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 32)
 }
 
+// 이번 실행에서 생긴 문제들 (반 관리 화면에 보여 줌)
+let warnings: string[] = []
+const warn = (msg: string) => {
+  console.error(msg)
+  if (warnings.length < 20) warnings.push(msg)
+}
+
+// 014 SQL(body_html)을 아직 안 돌렸으면 그 칸 없이 다시 넣음
+// deno-lint-ignore no-explicit-any
+async function insertRow(table: string, row: Record<string, any>) {
+  let res = await admin.from(table).insert(row).select('id').single()
+  if (res.error && /body_html/.test(res.error.message)) {
+    const { body_html: _, ...rest } = row
+    res = await admin.from(table).insert(rest).select('id').single()
+  }
+  return res
+}
+
 type Attachment = { path: string; name: string; size: number; type: string }
 
 // 첨부를 받아서 버킷에 올림. 못 받은 건 건너뜀
-async function saveFiles(riro: RiroSession, files: RiroFile[], bucket: string, prefix: string) {
+async function saveFiles(riro: RiroSession, files: RiroFile[], bucket: string, prefix: string, referer: string) {
   const saved: Attachment[] = []
   for (const [i, f] of files.slice(0, 10).entries()) {
     const ext = extOf(f.name)
     const type = TYPES[ext]
-    if (!type) continue
+    if (!type) {
+      warn(`첨부 ${f.name}: 올릴 수 없는 형식이라 건너뜀`)
+      continue
+    }
     try {
-      const body = await riro.download(f.url)
-      if (body.byteLength > MAX_BYTES) continue
+      const body = await riro.download(f.url, referer)
+      if (body.byteLength > MAX_BYTES) {
+        warn(`첨부 ${f.name}: 20MB 보다 커서 건너뜀`)
+        continue
+      }
       const path = `${prefix}-${i}.${ext}`
       const { error } = await admin.storage.from(bucket).upload(path, body, { contentType: type, upsert: true })
       if (error) throw error
       saved.push({ path, name: f.name, size: body.byteLength, type })
     } catch (e) {
-      console.error(`첨부 ${f.name}: ${String((e as Error).message ?? e)}`)
+      warn(`첨부 ${f.name}: ${String((e as Error).message ?? e)}`)
     }
   }
   return saved
@@ -97,7 +121,7 @@ async function push(classId: string, message: Record<string, string>) {
 type Link = { class_id: string; author_id: string; failed_login: string | null }
 type ClassInfo = { id: string; grade: number | null; class_no: number | null }
 
-async function assessmentDetail(riro: RiroSession, cate: string): Promise<RiroDetail> {
+async function assessmentDetail(riro: RiroSession, cate: string): Promise<RiroDetail & { page: string }> {
   const tries = [
     `portfolio.php?club=index&action=write_form&db=${ASSESS_DB}&cate=${cate}&cls=&my_cate=`,
     `portfolio.php?club=index&action=set_view&db=${ASSESS_DB}&cate=${cate}&cls=&my_cate=&uid=00&num=1`
@@ -105,12 +129,26 @@ async function assessmentDetail(riro: RiroSession, cate: string): Promise<RiroDe
   for (const path of tries) {
     try {
       const found = parseAssessmentDetail(await riro.page(path), BASE, ASSESS_DB, cate)
-      if (found) return found
+      if (found) return { ...found, page: new URL(path, BASE).href }
     } catch (e) {
-      console.error(`수행 ${cate} 공지: ${String((e as Error).message ?? e)}`)
+      warn(`수행 ${cate} 공지: ${String((e as Error).message ?? e)}`)
     }
   }
-  return { text: '', files: [] }
+  return { text: '', html: '', files: [], page: BASE }
+}
+
+// 과제를 받는 반 목록에 우리 반(예: 1학년 2반 → 102)이 있는지. 목록을 못 읽으면 일단 넣음
+async function forOurClass(riro: RiroSession, cate: string, cls: ClassInfo) {
+  if (!cls.grade || !cls.class_no) return true
+  try {
+    const targets = parseTargetClasses(await riro.page(`portfolio.php?action=list&db=${ASSESS_DB}&cate=${cate}`))
+    if (!targets.length) return true
+    const ours = String(cls.grade * 100 + cls.class_no)
+    return targets.includes(ours)
+  } catch (e) {
+    console.error(`수행 ${cate} 대상 반: ${String((e as Error).message ?? e)}`)
+    return true
+  }
 }
 
 async function syncClass(riro: RiroSession, link: Link, cls: ClassInfo, lists: {
@@ -126,18 +164,22 @@ async function syncClass(riro: RiroSession, link: Link, cls: ClassInfo, lists: {
   const seenN = new Set((seen ?? []).filter((r) => r.kind === 'notice').map((r) => r.source_id))
   const remember = (kind: string, source_id: string) =>
     admin.from('riro_seen').upsert({ class_id: cls.id, kind, source_id }, { ignoreDuplicates: true })
-  const freshA = lists.assessments
+  const candidates = lists.assessments
     .filter((a) => a.state !== '마감' && a.end >= now && forClass(a.title, cls.grade, cls.class_no) && !seenA.has(a.id))
-    .slice(0, MAX_NEW)
-  for (const a of freshA) {
+  let addedA = 0
+  for (const a of candidates) {
+    if (addedA >= MAX_NEW) break
+    if (!(await forOurClass(riro, a.id, cls))) continue
+    addedA++
     const detail = await assessmentDetail(riro, a.id)
-    const attachments = await saveFiles(riro, detail.files, 'assessments', `${cls.id}/riro-a${a.id}`)
+    const attachments = await saveFiles(riro, detail.files, 'assessments', `${cls.id}/riro-a${a.id}`, detail.page)
     const head = [
       a.teacher && `담당: ${a.teacher} 선생님`,
       `제출: ${a.start.slice(5)} ~ ${a.end.slice(5)}`
     ].filter(Boolean).join('\n')
-    const { data, error } = await admin.from('assessments').insert({
+    const { data, error } = await insertRow('assessments', {
       class_id: cls.id,
+      body_html: detail.html || null,
       subject: a.subject.slice(0, 30),
       title: a.title.slice(0, 200),
       due_date: a.due,
@@ -147,7 +189,7 @@ async function syncClass(riro: RiroSession, link: Link, cls: ClassInfo, lists: {
       source: 'riro',
       source_id: a.id,
       source_url: a.url
-    }).select('id').single()
+    })
     if (error) {
       console.error(`수행 ${a.id} 저장: ${error.message}`)
       if (attachments.length) await admin.storage.from('assessments').remove(attachments.map((f) => f.path))
@@ -164,18 +206,19 @@ async function syncClass(riro: RiroSession, link: Link, cls: ClassInfo, lists: {
     .slice(0, MAX_NEW)
     .reverse() // 오래된 것부터 올려야 목록 순서가 맞음
   for (const n of freshN) {
-    let detail: Awaited<ReturnType<typeof parseNoticeDetail>> = { text: '', files: [], posted: null }
+    let detail: Awaited<ReturnType<typeof parseNoticeDetail>> = { text: '', html: '', files: [], posted: null }
     try {
       detail = parseNoticeDetail(await riro.page(n.url), BASE)
     } catch (e) {
-      console.error(`통신문 ${n.id}: ${String((e as Error).message ?? e)}`)
+      warn(`통신문 ${n.id}: ${String((e as Error).message ?? e)}`)
     }
-    const saved = await saveFiles(riro, detail.files, 'notices', `${cls.id}/riro-n${n.id}`)
+    const saved = await saveFiles(riro, detail.files, 'notices', `${cls.id}/riro-n${n.id}`, n.url)
     const photos = saved.filter((f) => f.type.startsWith('image/'))
     const others = saved.filter((f) => !f.type.startsWith('image/'))
     const posted = detail.posted ? new Date(`${detail.posted.replace(' ', 'T')}+09:00`).toISOString() : undefined
-    const { data, error } = await admin.from('notices').insert({
+    const { data, error } = await insertRow('notices', {
       class_id: cls.id,
+      body_html: detail.html || null,
       title: n.title.slice(0, 200),
       memo: [n.writer && `작성: ${n.writer} 선생님`, detail.text].filter(Boolean).join('\n\n').slice(0, 20000),
       photo_paths: photos.map((f) => f.path),
@@ -185,7 +228,7 @@ async function syncClass(riro: RiroSession, link: Link, cls: ClassInfo, lists: {
       source_id: n.id,
       source_url: n.url,
       ...(posted ? { created_at: posted } : {})
-    }).select('id').single()
+    })
     if (error) {
       console.error(`통신문 ${n.id} 저장: ${error.message}`)
       if (saved.length) await admin.storage.from('notices').remove(saved.map((f) => f.path))
@@ -213,6 +256,7 @@ async function run(manual: boolean) {
   const id = Deno.env.get('RIRO_ID')
   const pw = Deno.env.get('RIRO_PW')
   if (!id || !pw) return { skipped: 'RIRO_ID, RIRO_PW 시크릿이 없어요' }
+  warnings = []
 
   // 20분 안에 돌았으면 건너뜀. 먼저 시각을 찍어서 동시에 불려도 한 번만 돔
   const cutoff = new Date(Date.now() - GAP_MINUTES * 60_000).toISOString()
@@ -262,9 +306,13 @@ async function run(manual: boolean) {
       if (cls) added += await syncClass(riro, link, cls, lists)
     }
     await admin.from('riro_links')
-      .update({ last_ok_at: new Date().toISOString(), last_error: null, failed_login: null })
+      .update({
+        last_ok_at: new Date().toISOString(),
+        last_error: warnings.length ? `일부를 못 가져왔어요: ${warnings.slice(0, 3).join(' / ')}` : null,
+        failed_login: null
+      })
       .in('class_id', classIds)
-    return { added, seen: { assessments: lists.assessments.length, notices: lists.notices.length } }
+    return { added, warnings, seen: { assessments: lists.assessments.length, notices: lists.notices.length } }
   } catch (e) {
     return fail(String((e as Error).message ?? e))
   }

@@ -8,6 +8,7 @@ import { useDone } from '../done.js'
 import { downloadIcs } from '../ics.js'
 import { AttachmentView, removeFiles } from '../components/Attachments.jsx'
 import RiroLink from '../components/RiroLink.jsx'
+import RiroBody, { riroHead } from '../components/RiroBody.jsx'
 
 export default function AssessmentDetail() {
   const { id } = useParams()
@@ -42,7 +43,13 @@ export default function AssessmentDetail() {
         {a.kind && <div><dt>평가 방식</dt><dd>{a.kind}</dd></div>}
         {a.weight != null && <div><dt>반영 비율</dt><dd>{a.weight}%</dd></div>}
       </dl>
-      {a.content && (
+      {a.body_html ? (
+        <section className="section">
+          <h2>세부 내용</h2>
+          {riroHead(a.content) && <p className="prose">{riroHead(a.content)}</p>}
+          <RiroBody html={a.body_html} />
+        </section>
+      ) : a.content && (
         <section className="section">
           <h2>세부 내용</h2>
           <p className="prose">{a.content}</p>

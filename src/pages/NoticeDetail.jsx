@@ -7,6 +7,7 @@ import { signedUrls } from './Notices.jsx'
 import Submissions from '../components/Submissions.jsx'
 import { AttachmentView } from '../components/Attachments.jsx'
 import RiroLink from '../components/RiroLink.jsx'
+import RiroBody, { riroHead } from '../components/RiroBody.jsx'
 
 export default function NoticeDetail() {
   const { id } = useParams()
@@ -41,7 +42,12 @@ export default function NoticeDetail() {
         {n.due_date && <p className="deadline">{formatDate(n.due_date)}까지 제출</p>}
         <RiroLink item={n} />
       </header>
-      {n.memo && <p className="prose">{n.memo}</p>}
+      {n.body_html ? (
+        <>
+          {riroHead(n.memo) && <p className="prose">{riroHead(n.memo)}</p>}
+          <RiroBody html={n.body_html} />
+        </>
+      ) : n.memo && <p className="prose">{n.memo}</p>}
       <div className="photos">
         {urls.map((u, i) => (
           <img key={u} src={u} alt={`통신문 ${i + 1}쪽`} onClick={() => setZoom(u)} />
