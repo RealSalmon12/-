@@ -2,7 +2,7 @@
 self.addEventListener('push', (event) => {
   let data = {}
   try { data = event.data ? event.data.json() : {} } catch { data = { title: event.data?.text() } }
-  event.waitUntil(self.registration.showNotification(data.title || '학급정리기', {
+  event.waitUntil(self.registration.showNotification(data.title || 'BacoClass', {
     body: data.body || '',
     tag: data.tag,
     icon: '/icon-192.png',

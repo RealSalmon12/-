@@ -20,7 +20,7 @@ export function downloadIcs(assessments, filename = '수행평가.ics') {
     'BEGIN:VALARM', 'TRIGGER:-PT15H', 'ACTION:DISPLAY', `DESCRIPTION:${esc(`내일 ${a.subject} 수행평가`)}`, 'END:VALARM',
     'END:VEVENT'
   ].join('\r\n'))
-  const text = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//학급정리기//KO', 'CALSCALE:GREGORIAN', ...events, 'END:VCALENDAR'].join('\r\n')
+  const text = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//BacoClass//KO', 'CALSCALE:GREGORIAN', ...events, 'END:VCALENDAR'].join('\r\n')
   const url = URL.createObjectURL(new Blob([text], { type: 'text/calendar;charset=utf-8' }))
   const a = Object.assign(document.createElement('a'), { href: url, download: filename })
   a.click()

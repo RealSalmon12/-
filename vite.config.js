@@ -14,12 +14,12 @@ export default defineConfig({
       },
       includeAssets: ['icon.svg', 'apple-touch-icon.png'],
       manifest: {
-        name: '학급정리기',
-        short_name: '학급정리기',
+        name: 'BacoClass',
+        short_name: 'BacoClass',
         description: '수행평가, 가정통신문, 급식을 한눈에',
         lang: 'ko',
-        theme_color: '#1e4a3b',
-        background_color: '#f3f6f1',
+        theme_color: '#17435a',
+        background_color: '#eff5f7',
         display: 'standalone',
         start_url: '/',
         icons: [

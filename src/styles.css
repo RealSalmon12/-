@@ -1,12 +1,12 @@
-/* 학급정리기: 칠판 초록 + 공책 종이 + 스테인리스 식판 */
+/* BacoClass: 북극 바다 + 얼음 공책 + 스테인리스 식판, 캐릭터는 바다코끼리 바코 */
 :root {
-  --paper: #f3f6f1;        /* 공책 바탕 */
-  --surface: #fbfcfa;
-  --rule: #d6ded7;         /* 공책 줄 */
-  --ink: #1b2420;
-  --ink-soft: #5f6a65;
-  --board: #1e4a3b;        /* 칠판 */
-  --board-ink: #eef3ee;    /* 분필 */
+  --paper: #eff5f7;        /* 얼음빛 공책 바탕 */
+  --surface: #fbfdfe;
+  --rule: #d2dee4;         /* 공책 줄 */
+  --ink: #15242c;
+  --ink-soft: #5a6b74;
+  --board: #17435a;        /* 북극 바다 (예전 칠판 자리) */
+  --board-ink: #eef6f8;    /* 얼음 */
   --highlight: #ffe45c;    /* 형광펜 */
   --redpen: #c93c27;       /* 빨간펜 */
   --steel-1: #dfe4e6;      /* 식판 */
@@ -26,13 +26,13 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --paper: #15201b;
-    --surface: #1b2822;
-    --rule: #2c3a33;
-    --ink: #e7ede8;
-    --ink-soft: #9aa69f;
-    --board: #8fc4ac;
-    --board-ink: #10241c;
+    --paper: #0f1d24;
+    --surface: #15262f;
+    --rule: #26404c;
+    --ink: #e6eff2;
+    --ink-soft: #93a6ae;
+    --board: #8cc6da;
+    --board-ink: #0c2330;
     --highlight: #8a7a1c;
     --redpen: #ff8a73;
     --steel-1: #44505a;
@@ -238,7 +238,7 @@ textarea { resize: vertical; line-height: 1.6; }
   position: fixed; right: 16px; bottom: calc(80px + env(safe-area-inset-bottom)); z-index: 5;
   display: inline-flex; align-items: center; gap: 6px; height: 50px; padding: 0 18px 0 14px;
   border-radius: 999px; background: var(--board); color: var(--board-ink); font-weight: 600;
-  box-shadow: 0 8px 18px -6px rgb(20 50 38 / 0.55);
+  box-shadow: 0 8px 18px -6px rgb(14 46 62 / 0.55);
 }
 
 /* 하단 탭 */
@@ -258,27 +258,44 @@ textarea { resize: vertical; line-height: 1.6; }
 }
 
 /* 로그인: 칠판 */
-.board {
-  min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; justify-content: space-between;
-  background: radial-gradient(120% 80% at 30% 20%, #2a5a49, #1e4a3b 55%, #173b2f);
-  color: #eef3ee;
+.floe-page {
+  min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column;
+  background: linear-gradient(#dcedf3, #eef7fa 70%); color: #17435a;
 }
-.board-inner { padding: 22vh 28px 0; max-width: 560px; }
-.board-title { font-size: 56px; line-height: 1.05; }
-.board-sub { margin-top: 16px; font-size: 17px; line-height: 1.7; opacity: 0.85; }
-.board-ledge {
-  padding: 22px 24px calc(28px + env(safe-area-inset-bottom));
-  border-top: 8px solid #9a7a52; background: #163629;
+.floe-sky { padding: 16vh 28px 0; max-width: 560px; }
+.floe-title { font-size: clamp(52px, 15vw, 76px); line-height: 1; letter-spacing: -0.01em; color: #17435a; }
+.floe-sub { margin-top: 14px; font-size: 17px; line-height: 1.7; color: #3f6474; }
+/* 얼음 위에 앉은 바코. 화면 아래 바다로 이어짐 */
+.floe-scene { position: relative; margin-top: auto; min-height: 270px; flex: none; }
+.floe-bob { position: absolute; left: 50%; bottom: 4px; width: 320px; margin-left: -150px; }
+.floe-baco { display: block; margin: 0 auto -20px; position: relative; z-index: 1; }
+.floe-ice { display: block; width: 100%; height: 56px; }
+.floe-wave { position: absolute; left: 0; right: 0; bottom: -1px; width: 100%; height: 24px; z-index: 2; }
+.floe-sea {
+  background: #17435a; color: #eef6f8;
+  padding: 18px 24px calc(28px + env(safe-area-inset-bottom));
   display: flex; flex-direction: column; gap: 12px;
 }
-.board-note { font-size: 13px; opacity: 0.6; text-align: center; }
-.board-note a { color: inherit; }
+.floe-sea > * { width: 100%; max-width: 512px; margin-left: auto; margin-right: auto; }
+.floe-note { font-size: 13px; opacity: 0.7; text-align: center; }
+.floe-note a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+.btn-ice {
+  min-height: 52px; padding: 0 20px; border: none; border-radius: 14px;
+  background: #fbfeff; color: #17435a; font-weight: 600; font-size: 17px;
+  box-shadow: 0 3px 0 #b9dbe7;
+}
+.floe-page :focus-visible { outline-color: var(--highlight); }
+@media (prefers-reduced-motion: no-preference) {
+  .floe-bob { animation: bob 4.5s ease-in-out infinite; }
+  @keyframes bob { 50% { transform: translateY(5px) rotate(-1deg); } }
+}
+
+/* 사진 크게 보기 위의 버튼 */
 .btn-chalk {
   min-height: 52px; padding: 0 20px; border: none; border-radius: 12px;
-  background: #eef3ee; color: #173b2f; font-weight: 600; font-size: 17px;
+  background: #eef6f8; color: #17435a; font-weight: 600; font-size: 17px;
   display: inline-flex; align-items: center; justify-content: center;
 }
-.board :focus-visible { outline-color: var(--highlight); }
 
 @media (prefers-reduced-motion: no-preference) {
   .toggle button, .chip, .tabbar a { transition: background-color 120ms, color 120ms; }
