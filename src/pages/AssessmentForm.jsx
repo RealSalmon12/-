@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../supabase.js'
 import { useSession } from '../session.jsx'
 import { today, KINDS } from '../util.js'
+import { AttachPicker, uploadDrafts, removeFiles } from '../components/Attachments.jsx'
 
 const EMPTY = { subject: '', due_date: today(), title: '', kind: '', weight: '', content: '', materials: '' }
 
@@ -14,6 +15,8 @@ export default function AssessmentForm() {
   const [subjects, setSubjects] = useState([])
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [files, setFiles] = useState([])
+  const [saved, setSaved] = useState(null) // 수정 전 첨부 (012 SQL 전이면 null)
 
   useEffect(() => {
     // 전에 쓴 과목 이름을 추천 목록으로
@@ -21,7 +24,14 @@ export default function AssessmentForm() {
       .then(({ data }) => setSubjects([...new Set((data ?? []).map((a) => a.subject))].sort()))
     if (!id) return
     supabase.from('assessments').select('*').eq('id', id).single()
-      .then(({ data }) => data && setForm({ ...EMPTY, ...data, kind: data.kind ?? '', weight: data.weight ?? '' }))
+      .then(({ data }) => {
+        if (!data) return
+        setForm({ ...EMPTY, ...data, kind: data.kind ?? '', weight: data.weight ?? '' })
+        if (data.attachments) {
+          setSaved(data.attachments)
+          setFiles(data.attachments)
+        }
+      })
   }, [id, member.class_id])
 
   if (!canPost) return <div className="page empty">선생님, 반장, 부반장만 쓸 수 있어요.</div>
@@ -32,6 +42,14 @@ export default function AssessmentForm() {
     e.preventDefault()
     setBusy(true)
     setError('')
+    let attachments
+    try {
+      attachments = await uploadDrafts(member.class_id, files)
+    } catch (err) {
+      setBusy(false)
+      return setError(err.message)
+    }
+    const fresh = attachments.filter((a) => !(saved ?? []).some((s) => s.path === a.path)).map((a) => a.path)
     const row = {
       subject: form.subject.trim(),
       due_date: form.due_date,
@@ -39,17 +57,24 @@ export default function AssessmentForm() {
       kind: form.kind,
       weight: form.weight === '' ? null : Number(form.weight),
       content: form.content,
-      materials: form.materials
+      materials: form.materials,
+      // 첨부 기능 전 DB 에서도 그냥 수정은 되게, 첨부가 있거나 원래 칸이 있을 때만 보냄
+      ...(files.length || saved ? { attachments } : {})
     }
     const { data, error } = id
       ? await supabase.from('assessments').update(row).eq('id', id).select('id').single()
       : await supabase.from('assessments').insert({ ...row, class_id: member.class_id }).select('id').single()
     setBusy(false)
     if (error) {
-      return setError(/kind|weight/.test(error.message)
+      await removeFiles(fresh)
+      return setError(/attachments/.test(error.message)
+        ? 'DB 업데이트가 아직 안 됐어요. Supabase에서 012_assessment_files.sql 을 실행해 주세요.'
+        : /kind|weight/.test(error.message)
         ? 'DB 업데이트가 아직 안 됐어요. Supabase에서 002_real_use.sql 을 실행해 주세요.'
         : error.message)
     }
+    // 수정에서 뺀 첨부는 저장소에서도 지움
+    await removeFiles((saved ?? []).filter((s) => !attachments.some((a) => a.path === s.path)).map((s) => s.path))
     navigate(`/assessments/${data.id}`, { replace: true })
   }
 
@@ -78,8 +103,12 @@ export default function AssessmentForm() {
       </div>
       <label>세부 내용<textarea rows={6} value={form.content} onChange={set('content')} placeholder="범위, 분량, 채점 기준처럼 알아야 할 것" /></label>
       <label>준비물 (선택)<textarea rows={2} value={form.materials} onChange={set('materials')} /></label>
+      <div className="field">
+        <span className="field-label">사진·파일 (선택)</span>
+        <AttachPicker items={files} onChange={setFiles} onError={setError} />
+      </div>
       {error && <p className="error">{error}</p>}
-      <button className="btn-primary" disabled={busy}>{id ? '수정 저장' : '올리기'}</button>
+      <button className="btn-primary" disabled={busy}>{busy ? (files.some((f) => f.file) ? '올리는 중…' : '저장하는 중…') : id ? '수정 저장' : '올리기'}</button>
     </form>
   )
 }

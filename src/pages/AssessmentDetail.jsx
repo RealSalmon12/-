@@ -6,6 +6,7 @@ import { formatDate } from '../util.js'
 import { DueMark } from '../components/DueList.jsx'
 import { useDone } from '../done.js'
 import { downloadIcs } from '../ics.js'
+import { AttachmentView, removeFiles } from '../components/Attachments.jsx'
 
 export default function AssessmentDetail() {
   const { id } = useParams()
@@ -20,7 +21,9 @@ export default function AssessmentDetail() {
 
   async function remove() {
     if (!confirm('이 수행평가를 지울까요?')) return
-    await supabase.from('assessments').delete().eq('id', id)
+    const { error } = await supabase.from('assessments').delete().eq('id', id)
+    if (error) return alert('지우지 못했어요. 잠시 뒤 다시 해 주세요.')
+    await removeFiles((a.attachments ?? []).map((f) => f.path))
     navigate('/assessments', { replace: true })
   }
 
@@ -49,6 +52,7 @@ export default function AssessmentDetail() {
           <p className="prose">{a.materials}</p>
         </section>
       )}
+      <AttachmentView items={a.attachments ?? []} />
       <div className="stack-buttons">
         <button className={done.has(a.id) ? 'btn-done on' : 'btn-done'} aria-pressed={done.has(a.id)} onClick={() => toggle(a.id)}>
           {done.has(a.id) ? '다 했어요 ✓' : '다 했으면 눌러 주세요'}

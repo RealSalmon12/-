@@ -582,3 +582,28 @@ button.chat-attach[aria-pressed="true"] { background: color-mix(in srgb, var(--b
 .dday-list li + li { border-top: 1px solid var(--rule); }
 .dday-big { flex: none; min-width: 84px; font-family: var(--font-display); font-weight: 400; font-size: 28px; color: var(--redpen); }
 .dday-text { flex: 1; display: flex; flex-direction: column; font-size: 16px; }
+
+/* 수행평가 첨부 */
+.error { white-space: pre-line; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field-label { font-size: 14px; font-weight: 500; color: var(--ink-soft); }
+.attach { display: flex; flex-direction: column; gap: 10px; }
+.attach-buttons { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.attach-buttons label.btn-quiet { display: inline-flex; flex-direction: row; cursor: pointer; color: var(--ink); }
+.attach-buttons label.btn-quiet:focus-within { outline: 2px solid var(--board); outline-offset: 2px; }
+.attach-buttons .fine { flex-basis: 100%; }
+.attach-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.attach-item {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; text-align: left;
+  border: 1px solid var(--rule); border-radius: 8px; background: var(--surface); color: var(--ink); font: inherit;
+}
+button.attach-file { cursor: pointer; }
+.attach-thumb { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; flex: none; background: var(--rule); }
+.attach-ext {
+  flex: none; width: 40px; height: 40px; display: grid; place-items: center; border-radius: 4px;
+  background: var(--board); color: var(--board-ink); font-size: 11px; font-weight: 700; letter-spacing: 0.02em; overflow: hidden;
+}
+.attach-name { flex: 1; min-width: 0; display: flex; flex-direction: column; font-size: 14px; overflow-wrap: anywhere; }
+.attach-photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; margin-bottom: 10px; }
+.attach-photos button { padding: 0; border: 0; background: none; cursor: zoom-in; }
+.attach-photos img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; border: 1px solid var(--rule); display: block; }
