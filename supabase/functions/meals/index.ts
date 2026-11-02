@@ -322,7 +322,7 @@ async function comciTimetable(from: string, to: string, grade: number, classNo: 
   if (!sc.name) throw new Error('학교 이름이 없음')
   const code = await comciSchoolCode(sc.name)
 
-  const week = await cached(`comci4:${code}:${grade}-${classNo}:${monday}`, async () => {
+  const week = await cached(`comci5:${code}:${grade}-${classNo}:${monday}`, async () => {
     const r = await getComciRoutes()
     const data = await comciJson(`${r.main}_T?${btoa(`${r.timetable}_${code}_0_1`)}`)
     const neisRows: { date: string; period: number; subject: string }[] = await neisTimetable(monday, addDaysIso(monday, 4), grade, classNo, sc).catch(() => [])
@@ -334,14 +334,33 @@ async function comciTimetable(from: string, to: string, grade: number, classNo: 
     const neisAt = new Map<string, string>(neisRows.map((n) => [`${n.date}-${n.period}`, n.subject]))
     const rows: { date: string; period: number; subject: string; teacher: string; changed: boolean; src: string; note?: string }[] = []
     const failed: string[] = []
+    // 교체된 칸은 과목 번호가 지금 과목 목록에서 빈 자리를 가리키는 경우가 있음 → 다른 문자열 목록에서 같은 번호를 찾아봄
+    const otherLists = Object.entries(data as Record<string, unknown>).filter(([, a]) =>
+      Array.isArray(a) && a !== subjects && a !== teachers && a.length > 3 &&
+      a.filter((x) => typeof x === 'string').length >= a.length * 0.5) as [string, unknown[]][]
+    const altUsed = new Set<string>()
+    const subjectOf = (v: number) => {
+      const i = subjectNo(v)
+      const main = String(subjects[i] ?? '').trim()
+      if (main) return main
+      for (const [k, a] of otherLists) {
+        const x = typeof a[i] === 'string' ? (a[i] as string).trim() : ''
+        if (x) { altUsed.add(k); return x }
+      }
+      return ''
+    }
     for (let d = 1; d <= 5; d++) {
       const periods = days[d] ?? []
       for (let p = 1; p < periods.length; p++) {
         const v = periods[p]
         if (!v) continue
         const date = addDaysIso(monday, d - 1)
-        let subject = String(subjects[subjectNo(v)] ?? '').trim()
-        if (!subject) { failed.push(`${'월화수목금'[d - 1]}${p}=${v}`); continue }
+        let subject = subjectOf(v)
+        if (!subject) {
+          const i = subjectNo(v)
+          failed.push(`${'월화수목금'[d - 1]}${p}=${v}[${JSON.stringify(subjects[i] ?? null)}/${String(teachers?.[teacherNo(v)] ?? '')}]`)
+          continue
+        }
         // 컴시간알리미는 과목 이름을 줄여 씀(공통국어2 → 국어). 같은 칸 NEIS 과목과 같은 과목이면 NEIS 의 긴 이름을 씀
         const full = neisAt.get(`${date}-${p}`)
         if (full && sameName(full, subject)) subject = full
@@ -350,7 +369,7 @@ async function comciTimetable(from: string, to: string, grade: number, classNo: 
       }
     }
     // 원인 확인용: 어떤 자료를 골랐는지, 못 읽은 칸 값이 뭔지
-    const note = `${parts.how}; 과목 ${subjects.length}개, 교사 ${teachers?.length ?? 0}개${failed.length ? `; 못 읽은 칸: ${failed.slice(0, 12).join(' ')}` : ''}`
+    const note = `${parts.how}; 과목 ${subjects.length}개, 교사 ${teachers?.length ?? 0}개${altUsed.size ? `; 다른 목록 사용: ${[...altUsed].join(',')}` : ''}${failed.length ? `; 못 읽은 칸: ${failed.slice(0, 12).join(' ')}; 다른 목록: ${otherLists.map(([k, a]) => `${k}(${a.length})`).join(',') || '없음'}` : ''}`
     if (rows[0]) rows[0].note = note
     if (!rows.length) throw new Error('컴시간알리미에 이 반 시간표가 없음')
     return rows
