@@ -396,6 +396,7 @@ textarea { resize: vertical; line-height: 1.6; }
 .tt-cell.today { border-color: var(--board); background: color-mix(in srgb, var(--board) 7%, var(--surface)); }
 .tt-cell.has-test { font-weight: 600; }
 .tt-cell.changed { border-style: dashed; border-color: var(--redpen); }
+.tt-teacher { display: block; font-size: 0.8em; color: var(--ink-soft); font-weight: 400; }
 .tt-dot { position: absolute; top: 4px; right: 4px; width: 7px; height: 7px; border-radius: 50%; background: var(--redpen); }
 
 /* 앱 설치 안내 */

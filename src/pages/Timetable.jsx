@@ -78,6 +78,12 @@ export default function Timetable() {
           </div>
         )}
       <p className="fine">빨간 점이 있는 칸은 그날 그 과목 수행평가가 있다는 뜻이에요. 이번 주 시간표는 컴시간알리미에서 가져와서 교체·보강도 바로 보여요(점선 칸이 바뀐 수업). 안 되면 NEIS 시간표를 보여줘요.</p>
+      {data[0]?.src && (
+        <p className="fine">
+          지금 보이는 시간표: {data[0].src === 'comci' ? '컴시간알리미' : 'NEIS'}
+          {data[0].src === 'neis' && data[0].why && ` (컴시간알리미에서 못 가져온 이유: ${data[0].why})`}
+        </p>
+      )}
       <p className="neis-credit">시간표 자료 출처: 컴시간알리미, 나이스 교육정보 개방 포털</p>
     </div>
   )
@@ -90,7 +96,12 @@ function Period({ period, dates, cell, due, today }) {
       {dates.map((d) => {
         const c = cell(d, period)
         const test = c && due.find((a) => a.due_date === d && sameSubject(a.subject, c.subject))
-        const body = <>{c?.subject}{test && <span className="tt-dot" aria-label="수행평가 있음" />}</>
+        const body = (
+          <>
+            <span>{c?.subject}{c?.teacher && <small className="tt-teacher">{c.teacher}</small>}</span>
+            {test && <span className="tt-dot" aria-label="수행평가 있음" />}
+          </>
+        )
         const cls = `tt-cell ${d === today ? 'today' : ''} ${test ? 'has-test' : ''} ${c?.changed ? 'changed' : ''}`
         return test
           ? <Link key={d} to={`/assessments/${test.id}`} className={cls}>{body}</Link>
