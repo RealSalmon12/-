@@ -6,6 +6,7 @@
 // 시간표는 이번 주 것이면 컴시간알리미(교체·보강까지 바로 반영)에서 먼저 가져오고, 안 되면 NEIS.
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import iconv from 'npm:iconv-lite@0.6.3'
+import { Buffer } from 'node:buffer'
 
 const DEFAULT_SCHOOL = { office: 'B10', name: '단국대학교부속소프트웨어고등학교', kind: '고등학교' }
 const TIMETABLE_SERVICE: Record<string, string> = {
@@ -154,7 +155,8 @@ let comciRoutes: { at: number; v: ComciRoutes } | null = null
 async function getComciRoutes(): Promise<ComciRoutes> {
   if (comciRoutes && Date.now() - comciRoutes.at < 3600_000) return comciRoutes.v
   const res = await fetch(`${COMCI}/st`, { headers: comciHeaders })
-  const html = new TextDecoder('euc-kr').decode(await res.arrayBuffer())
+  // Supabase 함수 환경의 TextDecoder 는 euc-kr 을 못 읽어서 한글이 깨짐 → iconv 로 읽음
+  const html = iconv.decode(Buffer.from(await res.arrayBuffer()), 'euc-kr')
   const pick = (re: RegExp, what: string) => {
     const m = re.exec(html)
     if (!m) throw new Error(`컴시간알리미 페이지에서 ${what} 를 못 찾음`)
