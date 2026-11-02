@@ -4,6 +4,7 @@ import { supabase } from '../supabase.js'
 import { useSession } from '../session.jsx'
 import { formatDate } from '../util.js'
 import { PlusIcon } from '../components/Icons.jsx'
+import PdfThumb from '../components/PdfThumb.jsx'
 
 // 비공개 버킷이라 1시간짜리 서명 링크로 사진을 보여줌
 export async function signedUrls(paths) {
@@ -42,7 +43,9 @@ export default function Notices() {
                 {thumbs[n.id] && <img src={thumbs[n.id]} alt="" />}
                 {n.photo_paths.length > 1 && <span className="sheet-count">{n.photo_paths.length}장</span>}
                 {!n.photo_paths.length && n.attachments?.length > 0 && (
-                  <span className="sheet-ext">{n.attachments[0].name.split('.').pop().toUpperCase()}</span>
+                  n.attachments[0].type === 'application/pdf'
+                    ? <PdfThumb bucket="notices" path={n.attachments[0].path} />
+                    : <span className="sheet-ext">{n.attachments[0].name.split('.').pop().toUpperCase()}</span>
                 )}
               </span>
               <span className="notice-body">

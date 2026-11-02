@@ -10,6 +10,8 @@ export default defineConfig({
       // 개인정보처리방침은 앱 화면이 아니라 그 파일 그대로 보여야 함
       workbox: {
         navigateFallbackDenylist: [/^\/privacy/],
+        // PDF 그리기(약 1.6MB)는 설치 때 미리 받지 않고, 가정통신문 목록을 열 때만 받음
+        globIgnores: ['**/pdf-*.js', '**/pdf.worker*'],
         importScripts: ['push-sw.js'] // 푸시 알림 받기
       },
       includeAssets: ['icon.svg', 'apple-touch-icon.png'],
