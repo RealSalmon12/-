@@ -6,6 +6,7 @@ import PushToggle from '../components/PushToggle.jsx'
 import ProfileEdit from '../components/ProfileEdit.jsx'
 import InstallHint from '../components/InstallHint.jsx'
 import BlockList from '../components/BlockList.jsx'
+import ThemePicker from '../components/ThemePicker.jsx'
 
 export default function Account() {
   const { user, member, isTeacher, reloadMember } = useSession()
@@ -63,6 +64,7 @@ export default function Account() {
       <button className="btn-quiet self-start" onClick={() => supabase.auth.signOut()}>로그아웃</button>
 
       <ProfileEdit />
+      <ThemePicker />
 
       <PushToggle />
       <InstallHint always />

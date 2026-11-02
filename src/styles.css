@@ -624,3 +624,55 @@ button.attach-file { cursor: pointer; }
 .attach-photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; margin-bottom: 10px; }
 .attach-photos button { padding: 0; border: 0; background: none; cursor: zoom-in; }
 .attach-photos img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; border: 1px solid var(--rule); display: block; }
+
+/* 계절 테마 (내 계정 > 테마). 겨울은 위 :root 기본값 */
+:root[data-season="spring"] {
+  --paper: #fbf3f4; --surface: #fffbfb; --rule: #ecd7dc;
+  --ink: #2b1c21; --ink-soft: #77606a;
+  --board: #b0476b; --board-ink: #fff4f7;
+}
+:root[data-season="summer"] {
+  --paper: #f1f7ee; --surface: #fbfdf9; --rule: #d5e4d0;
+  --ink: #18261b; --ink-soft: #5b6d5e;
+  --board: #2f7a45; --board-ink: #f2faf1;
+}
+:root[data-season="autumn"] {
+  --paper: #f8f2ea; --surface: #fffcf7; --rule: #e7d7c4;
+  --ink: #2b2018; --ink-soft: #78665a;
+  --board: #a4471f; --board-ink: #fff5ec;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-season="spring"] {
+    --paper: #21161a; --surface: #2a1d22; --rule: #45303a;
+    --ink: #f4e8ec; --ink-soft: #b59ca6;
+    --board: #f2a6c0; --board-ink: #2b0f19;
+  }
+  :root[data-season="summer"] {
+    --paper: #121c14; --surface: #18251b; --rule: #2a3f2e;
+    --ink: #e7f1e7; --ink-soft: #98ab9a;
+    --board: #9bd6a4; --board-ink: #0e2414;
+  }
+  :root[data-season="autumn"] {
+    --paper: #1e1611; --surface: #281e17; --rule: #433427;
+    --ink: #f3e9e0; --ink-soft: #b5a293;
+    --board: #f0a676; --board-ink: #2a1206;
+  }
+}
+
+.season-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.season {
+  display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 4px 8px;
+  border: 1px solid var(--rule); border-radius: 12px; background: var(--surface);
+}
+.season.on { border-color: var(--board); box-shadow: inset 0 0 0 1px var(--board); }
+.season b { font-family: var(--font-display); font-weight: 400; font-size: 18px; }
+.season .fine { font-size: 11px; }
+.season-swatch {
+  width: 40px; height: 40px; border-radius: 50%; margin-bottom: 4px;
+  background: linear-gradient(135deg, var(--s-paper) 0 50%, var(--s-board) 50%);
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.08);
+}
+.season-spring { --s-board: #b0476b; --s-paper: #f8d9e2; }
+.season-summer { --s-board: #2f7a45; --s-paper: #cfe8c7; }
+.season-autumn { --s-board: #a4471f; --s-paper: #f2cf9e; }
+.season-winter { --s-board: #17435a; --s-paper: #d6eaf1; }
