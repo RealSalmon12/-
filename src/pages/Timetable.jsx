@@ -4,7 +4,6 @@ import { supabase } from '../supabase.js'
 import { useSession } from '../session.jsx'
 import { useNeis } from '../neis.js'
 import { addDays, mondayOf, shortDate, useToday } from '../util.js'
-import NeisCredit from '../components/NeisCredit.jsx'
 
 const DAYS = ['월', '화', '수', '목', '금']
 const squash = (s) => s.replace(/\s/g, '')
@@ -78,8 +77,8 @@ export default function Timetable() {
             ))}
           </div>
         )}
-      <p className="fine">빨간 점이 있는 칸은 그날 그 과목 수행평가가 있다는 뜻이에요. 시간표는 NEIS에서 자동으로 불러오고, 매일 아침 새로 받아와요.</p>
-      <NeisCredit what="시간표" />
+      <p className="fine">빨간 점이 있는 칸은 그날 그 과목 수행평가가 있다는 뜻이에요. 이번 주 시간표는 컴시간알리미에서 가져와서 교체·보강도 바로 보여요(점선 칸이 바뀐 수업). 안 되면 NEIS 시간표를 보여줘요.</p>
+      <p className="neis-credit">시간표 자료 출처: 컴시간알리미, 나이스 교육정보 개방 포털</p>
     </div>
   )
 }
@@ -92,7 +91,7 @@ function Period({ period, dates, cell, due, today }) {
         const c = cell(d, period)
         const test = c && due.find((a) => a.due_date === d && sameSubject(a.subject, c.subject))
         const body = <>{c?.subject}{test && <span className="tt-dot" aria-label="수행평가 있음" />}</>
-        const cls = `tt-cell ${d === today ? 'today' : ''} ${test ? 'has-test' : ''}`
+        const cls = `tt-cell ${d === today ? 'today' : ''} ${test ? 'has-test' : ''} ${c?.changed ? 'changed' : ''}`
         return test
           ? <Link key={d} to={`/assessments/${test.id}`} className={cls}>{body}</Link>
           : <span key={d} className={cls}>{body}</span>
