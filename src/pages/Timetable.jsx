@@ -84,6 +84,7 @@ export default function Timetable() {
           {data[0].src === 'neis' && data[0].why && ` (컴시간알리미에서 못 가져온 이유: ${data[0].why})`}
         </p>
       )}
+      {data.find((r) => r.note) && <p className="fine">확인용: {data.find((r) => r.note).note}</p>}
       <p className="neis-credit">시간표 자료 출처: 컴시간알리미, 나이스 교육정보 개방 포털</p>
     </div>
   )

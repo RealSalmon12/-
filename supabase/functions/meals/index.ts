@@ -228,9 +228,12 @@ async function comciSchoolCode(name: string): Promise<number> {
 }
 
 type Grid = number[][][][]
+const sameName = (a: string, b: string) => { const x = squash(a), y = squash(b); return !!x && !!y && (x.includes(y) || y.includes(x)) }
+
 type Parts = {
   teachers: string[]; subjects: string[]; now: Grid; original: Grid
   subjectNo: (v: number) => number; teacherNo: (v: number) => number
+  how: string
 }
 
 // 칸 값에 과목번호와 교사번호가 합쳐져 있음. 자료.분리 가 100 이면 옛 방식(교사*100+과목), 아니면 과목*분리+교사
@@ -248,7 +251,7 @@ function fromRoutes(data: Record<string, unknown>, r: ComciRoutes): Parts {
   const original = data[`자료${r.original}`] as Grid
   if (!Array.isArray(subjects) || !Array.isArray(now)) throw new Error('컴시간알리미 자료 모양이 달라짐')
   const sep = Number(data['분리']) || 10 ** (Math.floor(Math.log10(Math.max(teachers?.length ?? 2, 2) - 1)) + 2)
-  return { teachers, subjects, now, original, ...splitter(sep) }
+  return { teachers, subjects, now, original, ...splitter(sep), how: `페이지 번호 사용(일일 ${r.day}, 원 ${r.original}, 분리 ${sep})` }
 }
 
 // 페이지에서 자료 번호를 못 찾았을 때: 시간표 자료 안의 배열 모양을 보고 고르고,
@@ -266,8 +269,7 @@ function inferComci(data: Record<string, unknown>, grade: number, classNo: numbe
   const neis = new Map(neisRows.map((r) => [`${new Date(r.date + 'T00:00:00Z').getUTCDay()}-${r.period}`, r.subject]))
   const seps = [...new Set([Number(data['분리']) || 0, 100, 1000, 10000].filter(Boolean))]
 
-  let best = { score: 0, grid: '', subj: '', sep: 0 }
-  for (const [gk, g] of grids) for (const [sk, subj] of strArrays) for (const sep of seps) {
+  const scoreOf = (g: Grid, subj: string[], sep: number) => {
     const { subjectNo } = splitter(sep)
     let score = 0
     const week = g[grade][classNo]
@@ -275,20 +277,30 @@ function inferComci(data: Record<string, unknown>, grade: number, classNo: numbe
       const v = week[d][p]; const n = neis.get(`${d}-${p}`)
       if (v && n && same(String(subj[subjectNo(v)] ?? ''), n)) score++
     }
+    return score
+  }
+  let best = { score: 0, grid: '', subj: '', sep: 0 }
+  for (const [gk, g] of grids) for (const [sk, subj] of strArrays) for (const sep of seps) {
+    const score = scoreOf(g, subj, sep)
     if (score > best.score) best = { score, grid: gk, subj: sk, sep }
   }
+  const gridScores = grids.map(([k, g]) => [k, scoreOf(g, data[best.subj] as string[] ?? [], best.sep)] as const)
   if (best.score < 3) {
     throw new Error(`컴시간알리미 자료를 못 알아봄 (문자열 배열: ${strArrays.map(([k, v]) => `${k}(${v.length}개, 예: ${v.slice(1, 3).join('/')})`).join(', ') || '없음'}; 시간표 배열: ${grids.map(([k]) => k).join(', ') || '없음'}; 분리: ${data['분리'] ?? '없음'}; ${note})`)
   }
   const { subjectNo, teacherNo } = splitter(best.sep)
-  // NEIS 와 더 맞는 쪽이 원래 시간표, 다른 하나가 오늘 기준(교체 반영) 시간표
-  const other = grids.find(([k]) => k !== best.grid)
+  // NEIS 와 가장 맞는 배열이 원래 시간표, 그다음으로 맞는 배열(교체 몇 칸만 다름)이 오늘 기준 시간표.
+  // 두 번째가 너무 안 맞으면(다른 주·다른 용도 배열) 원래 시간표를 그대로 씀
+  const ranked = [...gridScores].sort((a, b) => b[1] - a[1])
   const original = data[best.grid] as Grid
-  const now = (other?.[1] ?? original) as Grid
+  const second = ranked.find(([k]) => k !== best.grid)
+  const nowKey = second && second[1] >= best.score * 0.5 ? second[0] : best.grid
+  const now = data[nowKey] as Grid
   // 교사 이름 배열: 과목 배열이 아니고, 이름처럼 생긴 글자(한글 2~4자, 끝에 * 가능)가 가장 많은 것
   const nameLike = (a: string[]) => a.filter((x) => /^[가-힣]{2,4}\*?$/.test(String(x).trim())).length / a.length
   const teachers = strArrays.filter(([k]) => k !== best.subj).sort((a, b) => nameLike(b[1]) - nameLike(a[1]))[0]?.[1] ?? []
-  return { teachers, subjects: data[best.subj] as string[], now, original, subjectNo, teacherNo }
+  const how = `추측: 일일 ${nowKey}, 원 ${best.grid}, 과목 ${best.subj}, 분리 ${best.sep}, 점수 ${ranked.map(([k, n]) => `${k}:${n}`).join(' ')}`
+  return { teachers, subjects: data[best.subj] as string[], now, original, subjectNo, teacherNo, how }
 }
 
 function kstToday() {
@@ -310,28 +322,36 @@ async function comciTimetable(from: string, to: string, grade: number, classNo: 
   if (!sc.name) throw new Error('학교 이름이 없음')
   const code = await comciSchoolCode(sc.name)
 
-  const week = await cached(`comci3:${code}:${grade}-${classNo}:${monday}`, async () => {
+  const week = await cached(`comci4:${code}:${grade}-${classNo}:${monday}`, async () => {
     const r = await getComciRoutes()
     const data = await comciJson(`${r.main}_T?${btoa(`${r.timetable}_${code}_0_1`)}`)
+    const neisRows: { date: string; period: number; subject: string }[] = await neisTimetable(monday, addDaysIso(monday, 4), grade, classNo, sc).catch(() => [])
     const pickKnown = !!(r.teacher && r.subject && r.day && r.original)
-    const parts = pickKnown
-      ? fromRoutes(data, r)
-      : inferComci(data, grade, classNo, await neisTimetable(monday, addDaysIso(monday, 4), grade, classNo, sc), r.note)
+    const parts = pickKnown ? fromRoutes(data, r) : inferComci(data, grade, classNo, neisRows, r.note)
     const { teachers, subjects, now, original, subjectNo, teacherNo } = parts
     const days = now[grade]?.[classNo] ?? []
     const orig = original?.[grade]?.[classNo] ?? []
-    const rows: { date: string; period: number; subject: string; teacher: string; changed: boolean; src: string }[] = []
+    const neisAt = new Map<string, string>(neisRows.map((n) => [`${n.date}-${n.period}`, n.subject]))
+    const rows: { date: string; period: number; subject: string; teacher: string; changed: boolean; src: string; note?: string }[] = []
+    const failed: string[] = []
     for (let d = 1; d <= 5; d++) {
       const periods = days[d] ?? []
       for (let p = 1; p < periods.length; p++) {
         const v = periods[p]
         if (!v) continue
-        const subject = String(subjects[subjectNo(v)] ?? '').trim()
-        if (!subject) continue
+        const date = addDaysIso(monday, d - 1)
+        let subject = String(subjects[subjectNo(v)] ?? '').trim()
+        if (!subject) { failed.push(`${'월화수목금'[d - 1]}${p}=${v}`); continue }
+        // 컴시간알리미는 과목 이름을 줄여 씀(공통국어2 → 국어). 같은 칸 NEIS 과목과 같은 과목이면 NEIS 의 긴 이름을 씀
+        const full = neisAt.get(`${date}-${p}`)
+        if (full && sameName(full, subject)) subject = full
         const teacher = String(teachers?.[teacherNo(v)] ?? '').replace(/\*$/, '').trim()
-        rows.push({ date: addDaysIso(monday, d - 1), period: p, subject, teacher, changed: !!orig[d] && orig[d][p] !== v, src: 'comci' })
+        rows.push({ date, period: p, subject, teacher, changed: !!orig[d] && orig[d][p] !== v, src: 'comci' })
       }
     }
+    // 원인 확인용: 어떤 자료를 골랐는지, 못 읽은 칸 값이 뭔지
+    const note = `${parts.how}; 과목 ${subjects.length}개, 교사 ${teachers?.length ?? 0}개${failed.length ? `; 못 읽은 칸: ${failed.slice(0, 12).join(' ')}` : ''}`
+    if (rows[0]) rows[0].note = note
     if (!rows.length) throw new Error('컴시간알리미에 이 반 시간표가 없음')
     return rows
   }, (at) => Date.now() - new Date(at).getTime() < COMCI_MINUTES * 60_000)
