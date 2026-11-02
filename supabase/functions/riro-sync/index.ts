@@ -6,7 +6,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import * as webpush from 'jsr:@negrel/webpush@0.5.0'
 import {
-  forClass, LoginError, parseAssessmentDetail, parseAssessmentList, parseNoticeDetail, parseNoticeList,
+  forClass, LoginError, parseAssessmentDetail, parseAssessmentList, parseNoticeDetail, parseNoticeList, parseTargetClasses,
   type RiroDetail, type RiroFile, RiroSession
 } from './riro.ts'
 
@@ -113,6 +113,20 @@ async function assessmentDetail(riro: RiroSession, cate: string): Promise<RiroDe
   return { text: '', files: [] }
 }
 
+// 과제를 받는 반 목록에 우리 반(예: 1학년 2반 → 102)이 있는지. 목록을 못 읽으면 일단 넣음
+async function forOurClass(riro: RiroSession, cate: string, cls: ClassInfo) {
+  if (!cls.grade || !cls.class_no) return true
+  try {
+    const targets = parseTargetClasses(await riro.page(`portfolio.php?action=list&db=${ASSESS_DB}&cate=${cate}`))
+    if (!targets.length) return true
+    const ours = String(cls.grade * 100 + cls.class_no)
+    return targets.includes(ours)
+  } catch (e) {
+    console.error(`수행 ${cate} 대상 반: ${String((e as Error).message ?? e)}`)
+    return true
+  }
+}
+
 async function syncClass(riro: RiroSession, link: Link, cls: ClassInfo, lists: {
   assessments: ReturnType<typeof parseAssessmentList>; notices: ReturnType<typeof parseNoticeList>
 }) {
@@ -126,10 +140,13 @@ async function syncClass(riro: RiroSession, link: Link, cls: ClassInfo, lists: {
   const seenN = new Set((seen ?? []).filter((r) => r.kind === 'notice').map((r) => r.source_id))
   const remember = (kind: string, source_id: string) =>
     admin.from('riro_seen').upsert({ class_id: cls.id, kind, source_id }, { ignoreDuplicates: true })
-  const freshA = lists.assessments
+  const candidates = lists.assessments
     .filter((a) => a.state !== '마감' && a.end >= now && forClass(a.title, cls.grade, cls.class_no) && !seenA.has(a.id))
-    .slice(0, MAX_NEW)
-  for (const a of freshA) {
+  let addedA = 0
+  for (const a of candidates) {
+    if (addedA >= MAX_NEW) break
+    if (!(await forOurClass(riro, a.id, cls))) continue
+    addedA++
     const detail = await assessmentDetail(riro, a.id)
     const attachments = await saveFiles(riro, detail.files, 'assessments', `${cls.id}/riro-a${a.id}`)
     const head = [

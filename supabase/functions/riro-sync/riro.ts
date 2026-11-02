@@ -107,10 +107,23 @@ export function parseAssessmentList(html: string, base: string): RiroAssessment[
 }
 
 // 다른 반 전용 과제는 뺌: 제목에 "(1-3)" 처럼 반이 적혀 있는데 우리 반이 아니면 false
+// "(1-3)", "1-3반", "1학년 3반" 처럼 적힌 반을 찾음
 export function forClass(title: string, grade: number | null, classNo: number | null) {
-  const m = title.match(/\((\d)\s*-\s*(\d{1,2})\)/)
-  if (!m || !grade || !classNo) return true
-  return Number(m[1]) === grade && Number(m[2]) === classNo
+  if (!grade || !classNo) return true
+  const found = [
+    ...title.matchAll(/\((\d)\s*-\s*(\d{1,2})\)/g),
+    ...title.matchAll(/(\d)\s*-\s*(\d{1,2})\s*반/g),
+    ...title.matchAll(/(\d)\s*학년\s*(\d{1,2})\s*반/g)
+  ]
+  if (!found.length) return true
+  return found.some((m) => Number(m[1]) === grade && Number(m[2]) === classNo)
+}
+
+// 과제 제출 목록 화면(portfolio.php?action=list)의 반 고르기 칸 = 이 과제를 받는 반들 (예: ['101', '102'])
+export function parseTargetClasses(html: string): string[] {
+  const options = doc(html).querySelectorAll('select[name="cls"] option')
+  return [...options].map((o: { getAttribute(n: string): string | null }) => o.getAttribute('value') ?? '')
+    .filter((v: string) => /^\d{3,4}$/.test(v))
 }
 
 // 수행평가 공지·첨부 (portfolio.php?action=write_form 이나 set_view)
