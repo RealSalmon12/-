@@ -43,6 +43,7 @@ export default function DueList({ items, done, onToggle }) {
                   <span className="due-subject">{a.subject}</span>
                   {a.kind && <span className="due-kind">{a.kind}</span>}
                   {a.weight != null && <span className="due-kind">{a.weight}%</span>}
+                  {a.attachments?.length > 0 && <span className="due-kind" aria-label={`첨부 ${a.attachments.length}개`}>첨부 {a.attachments.length}</span>}
                 </span>
                 <span className="due-title">{a.title}</span>
               </span>
