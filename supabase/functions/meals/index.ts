@@ -3,7 +3,9 @@
 // 학교는 body 의 office(교육청 코드), school(학교 코드), schoolName, kind 로 받고,
 // 없으면 처음 쓰던 단국대학교부속소프트웨어고등학교를 씀.
 // 필요한 시크릿: NEIS_API_KEY (open.neis.go.kr 에서 발급)
+// 시간표는 이번 주 것이면 컴시간알리미(교체·보강까지 바로 반영)에서 먼저 가져오고, 안 되면 NEIS.
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import iconv from 'npm:iconv-lite@0.6.3'
 
 const DEFAULT_SCHOOL = { office: 'B10', name: '단국대학교부속소프트웨어고등학교', kind: '고등학교' }
 const TIMETABLE_SERVICE: Record<string, string> = {
@@ -32,7 +34,7 @@ async function neis(service: string, params: Record<string, string>) {
   return body[service]?.[1]?.row ?? []
 }
 
-type School = { office: string; code: string; kind: string }
+type School = { office: string; code: string; kind: string; name: string }
 const codeByName = new Map<string, string>()
 
 // body 에서 학교를 정하고, 학교 코드가 없으면 이름으로 찾아 둠
@@ -47,7 +49,7 @@ async function resolveSchool(body: Record<string, string>): Promise<School> {
     code = rows[0].SD_SCHUL_CODE
     codeByName.set(office + name, code)
   }
-  return { office, code, kind }
+  return { office, code, kind, name }
 }
 
 async function searchSchools(query: string) {
@@ -104,8 +106,19 @@ async function cached<T>(cacheKey: string, load: () => Promise<T>, fresh = isFre
   return loaded
 }
 
-function timetable(from: string, to: string, grade: number, classNo: number, sc: School) {
+async function timetable(from: string, to: string, grade: number, classNo: number, sc: School) {
   if (!grade || !classNo) throw new Error('반 관리에서 학년과 반 번호를 먼저 정해 주세요')
+  // 이번 주면 컴시간알리미 먼저. 학교를 못 찾거나 사이트가 바뀌어 실패하면 아래 NEIS 로
+  try {
+    const rows = await comciTimetable(from, to, grade, classNo, sc)
+    if (rows) return rows
+  } catch (e) {
+    console.error('컴시간알리미 실패, NEIS 로 대신함:', (e as Error).message)
+  }
+  return neisTimetable(from, to, grade, classNo, sc)
+}
+
+function neisTimetable(from: string, to: string, grade: number, classNo: number, sc: School) {
   const service = TIMETABLE_SERVICE[sc.kind] ?? 'hisTimetable'
   return cached(`timetable:${sc.code}:${grade}-${classNo}:${from}:${to}`, async () => {
     const rows = await neis(service, {
@@ -122,6 +135,119 @@ function timetable(from: string, to: string, grade: number, classNo: number, sc:
       subject: (r.ITRT_CNTNT ?? '').replace(/^-/, '').trim()
     }))
   }, isFreshToday)
+}
+
+// ───── 컴시간알리미 ─────
+// 공식 API 가 없어서, 컴시간알리미 웹페이지가 쓰는 주소를 그대로 따라 함 (comcigan.ts 라이브러리와 같은 방식).
+// 페이지가 바뀌면 실패할 수 있고, 그러면 NEIS 로 넘어감.
+const COMCI = 'http://comci.net:4082'
+const COMCI_MINUTES = 20 // 교체가 자주 생기니 짧게 캐시
+const comciHeaders = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36' }
+
+type ComciRoutes = { main: string; search: string; timetable: string; teacher: string; original: string; day: string; subject: string }
+let comciRoutes: { at: number; v: ComciRoutes } | null = null
+
+async function getComciRoutes(): Promise<ComciRoutes> {
+  if (comciRoutes && Date.now() - comciRoutes.at < 3600_000) return comciRoutes.v
+  const res = await fetch(`${COMCI}/st`, { headers: comciHeaders })
+  const html = new TextDecoder('euc-kr').decode(await res.arrayBuffer())
+  const pick = (re: RegExp, what: string) => {
+    const m = re.exec(html)
+    if (!m) throw new Error(`컴시간알리미 페이지에서 ${what} 를 못 찾음`)
+    return m[0]
+  }
+  const v = {
+    main: pick(/(?<=\.\/)\d+(?=\?\d+l)/, 'main'),
+    search: pick(/(?<=\?)\d+(?=l)/, 'search'),
+    timetable: pick(/(?<=')\d+(?=_')/, 'timetable'),
+    teacher: pick(/(?<=성명=자료\.자료)\d+/, 'teacher'),
+    original: pick(/(?<=원자료=Q자료\(자료.자료)\d+/, 'original'),
+    day: pick(/(?<=일일자료=Q자료\(자료.자료)\d+/, 'day'),
+    subject: pick(/(?<=자료.자료)\d+(?=\[sb\])/, 'subject')
+  }
+  comciRoutes = { at: Date.now(), v }
+  return v
+}
+
+async function comciJson(path: string) {
+  const res = await fetch(`${COMCI}/${path}`, { headers: comciHeaders })
+  if (!res.ok) throw new Error(`컴시간알리미 응답 ${res.status}`)
+  return JSON.parse((await res.text()).replace(/\0+$/, ''))
+}
+
+const squash = (s: string) => s.replace(/\s/g, '')
+
+// NEIS 학교 이름으로 컴시간알리미 학교 코드를 찾음 (한 번 찾으면 저장해 둠)
+async function comciSchoolCode(name: string): Promise<number | null> {
+  const cacheKey = `comci-school:${name}`
+  const { data } = await admin.from('neis_cache').select('*').eq('key', cacheKey).maybeSingle()
+  if (data?.data?.code) return data.data.code
+  const r = await getComciRoutes()
+  const short = name.replace(/(고등|중|초등)학교$/, (m) => ({ 고등학교: '고', 중학교: '중', 초등학교: '초' } as Record<string, string>)[m])
+  for (const q of [name, short]) {
+    const encoded = [...iconv.encode(q, 'euc-kr')].map((b) => '%' + b.toString(16).padStart(2, '0')).join('')
+    const { 학교검색: list = [] } = await comciJson(`${r.main}?${r.search}l${encoded}`) as { 학교검색?: [number, string, string, number][] }
+    const hit = list.find((s) => squash(s[2]) === squash(name)) ?? list.find((s) => squash(s[2]) === squash(short))
+      ?? (list.length === 1 ? list[0] : undefined)
+    if (hit) {
+      await admin.from('neis_cache').upsert({ key: cacheKey, data: { code: hit[3], name: hit[2] }, fetched_at: new Date().toISOString() })
+      return hit[3]
+    }
+  }
+  return null
+}
+
+function kstToday() {
+  return new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10)
+}
+function addDaysIso(iso: string, n: number) {
+  const d = new Date(iso + 'T00:00:00Z')
+  d.setUTCDate(d.getUTCDate() + n)
+  return d.toISOString().slice(0, 10)
+}
+
+// 이번 주(월~금) 범위만 컴시간알리미로. 다른 주면 null 을 돌려 NEIS 로 넘어감
+async function comciTimetable(from: string, to: string, grade: number, classNo: number, sc: School) {
+  const t = kstToday()
+  const dow = new Date(t + 'T00:00:00Z').getUTCDay()
+  if (dow === 0 || dow === 6) return null
+  const monday = addDaysIso(t, 1 - dow)
+  if (from < monday || to > addDaysIso(monday, 4)) return null
+  if (!sc.name) return null
+  const code = await comciSchoolCode(sc.name)
+  if (!code) return null
+
+  const week = await cached(`comci:${code}:${grade}-${classNo}:${monday}`, async () => {
+    const r = await getComciRoutes()
+    const data = await comciJson(`${r.main}_T?${btoa(`${r.timetable}_${code}_0_1`)}`)
+    const teachers = data[`자료${r.teacher}`] as string[]
+    const subjects = data[`자료${r.subject}`] as string[]
+    const now = data[`자료${r.day}`] as number[][][][]
+    const original = data[`자료${r.original}`] as number[][][][]
+    if (!Array.isArray(subjects) || !Array.isArray(now)) throw new Error('컴시간알리미 자료 모양이 달라짐')
+    // 칸 값에 과목번호와 교사번호가 합쳐져 있음. 자료.분리 가 있으면 그걸로 나누고(100 이면 옛 방식: 교사*100+과목),
+    // 없으면 교사 수 자릿수로 나눔 (comcigan.ts 와 같은 방식)
+    const split = Number(data['분리']) || 0
+    const fallback = 10 ** (Math.floor(Math.log10(Math.max(teachers?.length ?? 2, 2) - 1)) + 2)
+    const subjectNo = (v: number) => split === 100 ? v % 100 : Math.floor(v / (split || fallback))
+    const days = now[grade]?.[classNo] ?? []
+    const orig = original?.[grade]?.[classNo] ?? []
+    const rows: { date: string; period: number; subject: string; changed?: boolean }[] = []
+    for (let d = 1; d <= 5; d++) {
+      const periods = days[d] ?? []
+      for (let p = 1; p < periods.length; p++) {
+        const v = periods[p]
+        if (!v) continue
+        const subject = String(subjects[subjectNo(v)] ?? '').trim()
+        if (!subject) continue
+        rows.push({ date: addDaysIso(monday, d - 1), period: p, subject, changed: !!orig[d] && orig[d][p] !== v })
+      }
+    }
+    if (!rows.length) throw new Error('컴시간알리미에 이 반 시간표가 없음')
+    return rows
+  }, (at) => Date.now() - new Date(at).getTime() < COMCI_MINUTES * 60_000)
+
+  return week.filter((r) => r.date >= from && r.date <= to)
 }
 
 function schedule(from: string, to: string, sc: School) {
