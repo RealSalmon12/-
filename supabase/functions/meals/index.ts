@@ -67,6 +67,17 @@ const ymd = (d: string) => d.replaceAll('-', '')
 const isoDate = (s: string) => `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`
 const isFresh = (t: string) => Date.now() - new Date(t).getTime() < CACHE_HOURS * 3600_000
 
+// 시간표는 아침마다 새로 받음: 한국 시간 오전 6시가 지나면 그 전에 받아 둔 건 버림
+// (전날 밤에 받아 둔 시간표가 다음 날 아침에도 그대로 보이던 문제)
+const MORNING_HOUR_KST = 6
+function lastMorning() {
+  const kst = Date.now() + 9 * 3600_000
+  const day = 86400_000
+  const sinceMorning = (kst - MORNING_HOUR_KST * 3600_000) % day
+  return Date.now() - sinceMorning
+}
+const isFreshToday = (t: string) => isFresh(t) && new Date(t).getTime() >= lastMorning()
+
 function meals(from: string, to: string, sc: School) {
   return cached(`meals:${sc.code}:${from}:${to}`, async () => {
     const rows = await neis('mealServiceDietInfo', {
@@ -84,13 +95,13 @@ function meals(from: string, to: string, sc: School) {
   })
 }
 
-// 같은 요청은 neis_cache 에 저장해 두고 12시간 동안 다시 씀
-async function cached<T>(cacheKey: string, load: () => Promise<T>): Promise<T> {
+// 같은 요청은 neis_cache 에 저장해 두고 12시간 동안 다시 씀 (fresh 로 기준을 바꿀 수 있음)
+async function cached<T>(cacheKey: string, load: () => Promise<T>, fresh = isFresh): Promise<T> {
   const { data } = await admin.from('neis_cache').select('*').eq('key', cacheKey).maybeSingle()
-  if (data && isFresh(data.fetched_at)) return data.data as T
-  const fresh = await load()
-  await admin.from('neis_cache').upsert({ key: cacheKey, data: fresh, fetched_at: new Date().toISOString() })
-  return fresh
+  if (data && fresh(data.fetched_at)) return data.data as T
+  const loaded = await load()
+  await admin.from('neis_cache').upsert({ key: cacheKey, data: loaded, fetched_at: new Date().toISOString() })
+  return loaded
 }
 
 function timetable(from: string, to: string, grade: number, classNo: number, sc: School) {
@@ -110,7 +121,7 @@ function timetable(from: string, to: string, grade: number, classNo: number, sc:
       period: Number(r.PERIO),
       subject: (r.ITRT_CNTNT ?? '').replace(/^-/, '').trim()
     }))
-  })
+  }, isFreshToday)
 }
 
 function schedule(from: string, to: string, sc: School) {

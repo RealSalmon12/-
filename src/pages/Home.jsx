@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../supabase.js'
 import { useSession, ROLE_NAMES } from '../session.jsx'
-import { today, formatDate, addDays } from '../util.js'
+import { useToday, formatDate, addDays } from '../util.js'
 import { useMeals, AllergyLegend } from './Meals.jsx'
 import Tray from '../components/Tray.jsx'
 import NeisCredit from '../components/NeisCredit.jsx'
@@ -34,7 +34,7 @@ export default function Home() {
   const [assessments, setAssessments] = useState([])
   const [notices, setNotices] = useState([])
   const [mealType, setMealType] = useState(null)
-  const t = today()
+  const t = useToday()
   const meals = useMeals(t, t)
   const shown = meals.list.find((m) => m.meal_type === (mealType ?? defaultMeal(meals.list)))
   const { done, toggle } = useDone()
