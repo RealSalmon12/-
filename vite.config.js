@@ -18,8 +18,8 @@ export default defineConfig({
         short_name: 'BacoClass',
         description: '수행평가, 가정통신문, 급식을 한눈에',
         lang: 'ko',
-        theme_color: '#17435a',
-        background_color: '#eff5f7',
+        theme_color: '#34406a',
+        background_color: '#f4ede6',
         display: 'standalone',
         start_url: '/',
         icons: [
