@@ -7,9 +7,10 @@ import ProfileEdit from '../components/ProfileEdit.jsx'
 import InstallHint from '../components/InstallHint.jsx'
 import BlockList from '../components/BlockList.jsx'
 import ThemePicker from '../components/ThemePicker.jsx'
+import RiroSync from '../components/RiroSync.jsx'
 
 export default function Account() {
-  const { user, member, isTeacher, reloadMember } = useSession()
+  const { user, member, isTeacher, canPost, reloadMember } = useSession()
   const navigate = useNavigate()
   const [otherTeachers, setOtherTeachers] = useState(null)
   const [typed, setTyped] = useState('')
@@ -65,6 +66,8 @@ export default function Account() {
 
       <ProfileEdit />
       <ThemePicker />
+      {/* 반장·부반장은 반 관리 화면이 없어서 여기서 리로스쿨을 연결함 */}
+      {canPost && !isTeacher && <RiroSync classId={member.class_id} />}
 
       <PushToggle />
       <InstallHint always />

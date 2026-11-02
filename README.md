@@ -65,14 +65,18 @@ supabase functions deploy meals
 
 ### 리로스쿨 자동 가져오기 (선택)
 
-리로스쿨 계정으로 하루 세 번(7:00, 12:40, 17:00) 로그인해서, 아직 안 끝난 수행평가와 새 가정통신문을 첨부까지 가져와 반에 올리고 알림을 보내요. 반에서 지운 글은 다시 가져오지 않아요.
+반마다 선생님·반장·부반장이 자기 리로스쿨 계정을 연결하면, 하루 세 번(7:00, 12:40, 17:00) 로그인해서 그 반이 받는 수행평가와 새 가정통신문을 본문(표 포함)·첨부까지 가져와 올리고 알림을 보내요. 반에서 지운 글은 다시 가져오지 않아요.
 
-1. **Edge Functions → Secrets** 에 `RIRO_ID`, `RIRO_PW` (리로스쿨 아이디·비밀번호) 추가. 다른 학교라면 `RIRO_BASE` (예: `https://xxx.riroschool.kr/`)도
-2. 함수 `riro-sync` 배포: [`index.ts`](supabase/functions/riro-sync/index.ts), [`riro.ts`](supabase/functions/riro-sync/riro.ts) 두 파일
-3. SQL Editor 에서 [`013_riro_sync.sql`](supabase/migrations/013_riro_sync.sql) 의 `<ANON_KEY>`, `<초대코드>`, `<내 구글 이메일>` 을 바꿔서 실행
-4. 앱의 **반 관리 → 리로스쿨 자동 가져오기 → 지금 가져오기** 로 확인
+1. 함수 `riro-sync` 배포: [`index.ts`](supabase/functions/riro-sync/index.ts), [`riro.ts`](supabase/functions/riro-sync/riro.ts) 두 파일
+2. SQL Editor 에서 차례로 실행
+   - [`013_riro_sync.sql`](supabase/migrations/013_riro_sync.sql): `<ANON_KEY>` 만 바꾸고, 맨 아래 "연결" 부분은 지워도 돼요
+   - [`014_riro_body_html.sql`](supabase/migrations/014_riro_body_html.sql)
+   - [`015_riro_connect.sql`](supabase/migrations/015_riro_connect.sql)
+3. 앱에서 연결: 선생님은 **반 관리**, 반장·부반장은 **내 계정** → 리로스쿨 자동 가져오기 → 학교 주소(예: `dankook.riroschool.kr`), 아이디, 비밀번호
 
-비밀번호는 시크릿에만 있고 DB·앱에는 없어요. 로그인에 실패하면 같은 비밀번호로는 자동으로 다시 시도하지 않아요(계정 잠금 방지). 리로스쿨에 2단계 인증(OTP)이 켜져 있으면 쓸 수 없어요.
+연결하면 바로 로그인해 보고, 메뉴에서 교과활동·가정통신문 게시판을 찾아요. 비밀번호는 Supabase Vault 에 암호화해 두고 함수만 꺼낼 수 있어요. 로그인에 실패하면 같은 비밀번호로는 자동으로 다시 시도하지 않아요(계정 잠금 방지). 2단계 인증(OTP)이 켜진 계정은 쓸 수 없어요.
+
+시크릿 `RIRO_ID`, `RIRO_PW` 를 넣어 두면 앱에서 연결하지 않고 013 SQL 로만 연결한 반은 그 계정을 써요.
 
 ### 반 채팅
 
