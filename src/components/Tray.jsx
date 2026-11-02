@@ -34,7 +34,8 @@ export default function Tray({ dishes, showAllergies = false }) {
   return (
     <div className="tray-wrap">
       <div className="tray" role="list" aria-label="급식 메뉴">
-        <div className="tray-row tray-sides">
+        {/* 반찬 수에 맞춰 칸을 나눔(4개면 2×2). 좁은 폰에서 한 칸만 아래로 떨어지지 않게 */}
+        <div className="tray-row tray-sides" style={{ gridTemplateColumns: `repeat(${top.length === 4 ? 2 : Math.min(top.length, 3)}, minmax(0, 1fr))` }}>
           {top.map((d, i) => (
             <div key={i} className="well" role="listitem"><Dish dish={d} showAllergies={showAllergies} /></div>
           ))}

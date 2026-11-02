@@ -356,7 +356,7 @@ export default function Chat() {
           <textarea ref={textRef} value={text} rows={1} maxLength={500}
             onChange={(e) => { setText(e.target.value); setCaret(e.target.selectionStart) }}
             onSelect={(e) => setCaret(e.target.selectionStart)}
-            placeholder={uploading ? '사진 올리는 중…' : '메시지 (@로 친구 부르기)'} aria-label="메시지"
+            placeholder={uploading ? '사진 올리는 중…' : '메시지 (@친구)'} aria-label="메시지"
             onKeyDown={(e) => {
               // 한글 조합 중 Enter 는 글자 확정이므로 보내지 않음
               if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) send(e)
