@@ -26,16 +26,77 @@ export type RiroNotice = {
   date: string          // 'YYYY-MM-DD'
   url: string
 }
-export type RiroDetail = { text: string; files: RiroFile[] }
+export type RiroDetail = { text: string; html: string; files: RiroFile[] }
+
+// 리로스쿨 일부 화면은 EUC-KR 일 수 있어서, 머리말·meta 의 charset 을 보고 글자로 바꿈
+export function decodeHtml(bytes: Uint8Array, contentType = '') {
+  const head = new TextDecoder('latin1').decode(bytes.slice(0, 4096))
+  const named = (contentType.match(/charset=["']?([\w-]+)/i) ?? head.match(/<meta[^>]+charset=["']?([\w-]+)/i))?.[1]?.toLowerCase()
+  const label = named && /^(euc-kr|ks_c_5601-1987|cp949|x-windows-949|ksc5601)$/.test(named) ? 'euc-kr' : named
+  if (label && label !== 'utf-8' && label !== 'utf8') {
+    try { return new TextDecoder(label).decode(bytes) } catch { /* 모르는 이름이면 아래로 */ }
+  }
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes)
+  } catch {
+    return new TextDecoder('euc-kr').decode(bytes)
+  }
+}
+
+// 첨부 대신 온 화면에서 진짜 파일 주소(자바스크립트 이동, meta refresh)를 찾음
+export function redirectInHtml(html: string) {
+  return html.match(/location(?:\.href)?\s*=\s*['"]([^'"]+)['"]/i)?.[1]
+    ?? html.match(/location\.replace\(\s*['"]([^'"]+)['"]/i)?.[1]
+    ?? html.match(/<meta[^>]+http-equiv=["']?refresh["']?[^>]+url=([^"'>\s]+)/i)?.[1]
+    ?? null
+}
+const alertIn = (html: string) => html.match(/alert\(\s*['"]([^'"]{1,80})['"]/)?.[1]?.replace(/\\n/g, ' ')
 
 // Edge Function 에는 DOM 타입이 없어서 any 로 둠
 // deno-lint-ignore no-explicit-any
 const doc = (html: string): any => (parseHTML(html) as any).document
 const clean = (s: string | null | undefined) => (s ?? '').replace(/[\u00a0\u3000]/g, ' ').replace(/\s+/g, ' ').trim()
 
-// 본문 HTML 을 줄바꿈을 살린 글자로
+// 본문 HTML 을 앱에서 그대로 보여 줄 안전한 HTML 로 (표·굵게·목록만 남기고 나머지 태그·속성은 다 버림)
+// 글자는 모두 이스케이프하고, 허용한 태그 이름과 숫자 colspan/rowspan 만 새로 써서 만듦
+const KEEP = new Set(['p', 'br', 'strong', 'b', 'u', 'em', 'i', 'table', 'thead', 'tbody', 'tr', 'td', 'th', 'ul', 'ol', 'li', 'blockquote'])
+const DROP = new Set(['script', 'style', 'iframe', 'object', 'embed', 'img', 'svg', 'video', 'audio', 'form', 'input', 'button', 'select', 'textarea', 'noscript', 'template'])
+const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+// deno-lint-ignore no-explicit-any
+function walk(node: any): string {
+  if (node.nodeType === 3) return esc(String(node.textContent ?? '').replace(/[\u00a0\u3000]/g, ' '))
+  if (node.nodeType !== 1) return ''
+  const tag = String(node.tagName).toLowerCase()
+  if (DROP.has(tag)) return ''
+  const inner = [...node.childNodes].map(walk).join('')
+  if (tag === 'br') return '<br>'
+  if (tag === 'div') return `<p>${inner}</p>`
+  if (/^h[1-6]$/.test(tag)) return `<p><strong>${inner}</strong></p>`
+  if (!KEEP.has(tag)) return inner
+  let attrs = ''
+  if (tag === 'td' || tag === 'th') {
+    for (const name of ['colspan', 'rowspan']) {
+      const v = node.getAttribute(name)
+      if (v && /^\d{1,2}$/.test(v) && v !== '1') attrs += ` ${name}="${v}"`
+    }
+  }
+  return `<${tag}${attrs}>${inner}</${tag}>`
+}
+export function safeHtml(html: string) {
+  const root = doc(`<div id="x">${html}</div>`).getElementById('x')
+  if (!root) return ''
+  const out = [...root.childNodes].map(walk).join('')
+    .replace(/<p>(\s|<br>)*<\/p>/g, '')
+    .replace(/(<br>\s*){3,}/g, '<br><br>')
+    .trim()
+  return out.length > 100_000 ? '' : out
+}
+
+// 본문 HTML 을 줄바꿈을 살린 글자로 (알림·미리보기용). 표는 한 줄에 칸을 " · " 로 이어 붙임
 export function htmlToText(html: string) {
   const marked = html
+    .replace(/<(script|style)[\s\S]*?<\/\1>/gi, '')
+    .replace(/<\/t[dh]>\s*(?=<t[dh][\s>])/gi, ' · ')
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/(p|div|li|tr|h[1-6]|blockquote)>/gi, '\n')
   const text = doc(`<div id="x">${marked}</div>`).getElementById('x')?.textContent ?? ''
@@ -142,7 +203,7 @@ export function parseAssessmentDetail(html: string, base: string, db: string, ca
     const q = `?club=index&action=down&db=${db}&page=1&cate=${cate}&cls=&my_cate=&sort=&uid=${m[1]}&file_num=${m[2]}&file_code=${m[3]}`
     files.push({ name, url: new URL(`portfolio.php${q}`, base).href })
   }
-  return { text: box ? htmlToText(box.innerHTML) : '', files }
+  return { text: box ? htmlToText(box.innerHTML) : '', html: box ? safeHtml(box.innerHTML) : '', files }
 }
 
 // 가정통신문 목록 (board_msg.php?db=...)
@@ -182,7 +243,7 @@ export function parseNoticeDetail(html: string, base: string): RiroDetail & { po
   }
   const head = clean(view?.querySelector('.view_header_right')?.textContent)
   const posted = head.match(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/)?.[0] ?? null
-  return { text: body ? htmlToText(body.innerHTML) : '', files, posted }
+  return { text: body ? htmlToText(body.innerHTML) : '', html: body ? safeHtml(body.innerHTML) : '', files, posted }
 }
 
 // ── 로그인 세션 ─────────────────────────────────────────────
@@ -205,13 +266,13 @@ export class RiroSession {
     }
   }
 
-  async request(path: string, init: RequestInit = {}): Promise<Response> {
+  async request(path: string, init: RequestInit = {}, referer = this.base): Promise<Response> {
     let url = new URL(path, this.base).href
     let opts: RequestInit = init
     for (let hop = 0; hop < 6; hop++) {
       const headers = new Headers(opts.headers)
       headers.set('User-Agent', UA)
-      headers.set('Referer', this.base)
+      headers.set('Referer', referer)
       if (this.jar.size) headers.set('Cookie', [...this.jar].map(([k, v]) => `${k}=${v}`).join('; '))
       const res = await fetch(url, { ...opts, headers, redirect: 'manual', signal: AbortSignal.timeout(20_000) })
       this.keep(res)
@@ -229,7 +290,7 @@ export class RiroSession {
 
   async page(path: string) {
     const res = await this.request(path)
-    const html = await res.text()
+    const html = decodeHtml(new Uint8Array(await res.arrayBuffer()), res.headers.get('content-type') ?? '')
     if (!res.ok) throw new Error(`리로스쿨 응답 ${res.status}`)
     if (html.includes('signin_form')) throw new Error('리로스쿨 로그인이 풀렸어요')
     return html
@@ -252,15 +313,20 @@ export class RiroSession {
     if (out?.data?.url) await (await this.request(out.data.url)).body?.cancel()
   }
 
-  async download(url: string) {
-    const res = await this.request(url)
-    if (!res.ok) throw new Error(`첨부 받기 실패 ${res.status}`)
+  // referer: 첨부가 있던 화면 주소 (리로스쿨이 어디서 눌렀는지 확인할 때가 있음)
+  async download(url: string, referer?: string, hop = 0): Promise<Uint8Array> {
+    const res = await this.request(url, {}, referer ?? this.base)
+    if (!res.ok) throw new Error(`첨부 받기 실패 (응답 ${res.status})`)
     const type = res.headers.get('content-type') ?? ''
-    if (type.includes('text/html')) {
-      await res.body?.cancel()
-      throw new Error('첨부 대신 화면이 왔어요')
-    }
-    return new Uint8Array(await res.arrayBuffer())
+    const bytes = new Uint8Array(await res.arrayBuffer())
+    const looksHtml = type.includes('text/html') ||
+      /^\s*<(!doctype|html|script|head|meta)/i.test(new TextDecoder('latin1').decode(bytes.slice(0, 200)))
+    if (!looksHtml) return bytes
+    const html = decodeHtml(bytes, type)
+    const next = redirectInHtml(html)
+    if (next && hop < 2) return this.download(new URL(next, url).href, url, hop + 1)
+    if (html.includes('signin_form')) throw new Error('첨부 받는 중 로그인이 풀렸어요')
+    throw new Error(`첨부 대신 화면이 왔어요${alertIn(html) ? `: ${alertIn(html)}` : ''}`)
   }
 }
 

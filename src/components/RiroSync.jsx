@@ -23,7 +23,10 @@ export default function RiroSync({ classId }) {
     if (error) setResult('가져오지 못했어요. 잠시 뒤 다시 해 주세요.')
     else if (data?.skipped) setResult(data.skipped)
     else if (data?.error) setResult(data.error)
-    else setResult(data?.added ? `새 글 ${data.added}개를 가져왔어요.` : '새 글이 없어요.')
+    else {
+      const note = data?.warnings?.length ? ` 못 가져온 것: ${data.warnings.slice(0, 3).join(' / ')}` : ''
+      setResult((data?.added ? `새 글 ${data.added}개를 가져왔어요.` : '새 글이 없어요.') + note)
+    }
     load()
   }
 
