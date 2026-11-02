@@ -246,6 +246,31 @@ export function parseNoticeDetail(html: string, base: string): RiroDetail & { po
   return { text: body ? htmlToText(body.innerHTML) : '', html: body ? safeHtml(body.innerHTML) : '', files, posted }
 }
 
+// 사용자가 넣은 학교 리로스쿨 주소를 'https://xxx.riroschool.kr/' 로. 리로스쿨이 아닌 주소는 null
+// (예: dankook, dankook.riroschool.kr, https://dankook.riroschool.kr/index.php)
+export function normalizeBase(input: string) {
+  const m = input.trim().toLowerCase().match(/^(?:https?:\/\/)?([a-z0-9][a-z0-9-]{0,40})(?:\.riroschool\.kr)?(?:\/[^\s]*)?$/)
+  if (!m || m[1] === 'www') return null
+  return `https://${m[1]}.riroschool.kr/`
+}
+
+// 메뉴에서 교과활동(수행평가)·가정통신문 게시판 번호를 찾음
+export function parseMenu(html: string) {
+  const items = [...html.matchAll(/menuAction\('\/(portfolio|board_msg)\.php\?db=(\d+)'\s*,\s*''\);?"[^>]*>\s*(?:<img[^>]*>)?\s*([^<]+)</g)]
+    .map((m) => ({ kind: m[1], db: m[2], name: m[3].replace(/\s+/g, ' ').trim() }))
+  const find = (kind: string, words: string[]) => {
+    for (const w of words) {
+      const hit = items.find((i) => i.kind === kind && i.name.includes(w))
+      if (hit) return hit.db
+    }
+    return null
+  }
+  return {
+    assessDb: find('portfolio', ['교과활동', '수행평가', '교과']),
+    noticeDb: find('board_msg', ['가정통신문', '가정통신', '통신문'])
+  }
+}
+
 // ── 로그인 세션 ─────────────────────────────────────────────
 export class RiroSession {
   private jar = new Map<string, string>()
@@ -310,7 +335,10 @@ export class RiroSession {
       const msg = String(out?.msg ?? '').replace(/\\r|\\n|\r|\n/g, ' ').trim()
       throw new LoginError(`리로스쿨 로그인 실패${msg ? `: ${msg}` : ''}`)
     }
-    if (out?.data?.url) await (await this.request(out.data.url)).body?.cancel()
+    // 로그인 뒤 첫 화면 (메뉴에서 게시판 번호를 찾을 때 씀)
+    if (!out?.data?.url) return ''
+    const landing = await this.request(out.data.url)
+    return decodeHtml(new Uint8Array(await landing.arrayBuffer()), landing.headers.get('content-type') ?? '')
   }
 
   // referer: 첨부가 있던 화면 주소 (리로스쿨이 어디서 눌렀는지 확인할 때가 있음)
