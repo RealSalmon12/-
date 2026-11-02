@@ -3,7 +3,7 @@ export const SEASONS = [
   { id: 'spring', name: '봄', note: '벚꽃', color: '#b0476b' },
   { id: 'summer', name: '여름', note: '푸른 잎', color: '#2f7a45' },
   { id: 'autumn', name: '가을', note: '단풍', color: '#a4471f' },
-  { id: 'winter', name: '겨울', note: '포근한 눈', color: '#5b3a2e' }
+  { id: 'winter', name: '겨울', note: '포근한 눈', color: '#34406a' }
 ]
 const KEY = 'bacoclass-season'
 

@@ -23,7 +23,7 @@ export default function Login() {
           </svg>
         </div>
         <svg className="floe-wave" viewBox="0 0 400 24" preserveAspectRatio="none">
-          <path d="M0 12C34 2 66 2 100 12S166 22 200 12S266 2 300 12S366 22 400 12V24H0Z" fill="#5b3a2e" />
+          <path d="M0 12C34 2 66 2 100 12S166 22 200 12S266 2 300 12S366 22 400 12V24H0Z" fill="#34406a" />
         </svg>
       </div>
       <div className="floe-sea">
