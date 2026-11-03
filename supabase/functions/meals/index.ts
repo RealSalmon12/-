@@ -162,22 +162,34 @@ async function getComciRoutes(): Promise<ComciRoutes> {
   const res = await fetch(`${COMCI}/st`, { headers: comciHeaders })
   // Supabase 함수 환경의 TextDecoder 는 euc-kr 을 못 읽어서 한글이 깨짐 → iconv 로 읽음
   const html = iconv.decode(Buffer.from(await res.arrayBuffer()), 'euc-kr')
-  const must = (re: RegExp, what: string) => {
-    const m = re.exec(html)
-    if (!m) throw new Error(`컴시간알리미 페이지에서 ${what} 를 못 찾음 (페이지 ${html.length}자)`)
-    return m[0]
+  // 페이지가 조금 바뀌어도 찾도록 여러 모양으로 시도 (첫 번째 괄호 안 숫자를 씀)
+  const first = (res: RegExp[]) => { for (const re of res) { const m = re.exec(html); if (m) return m[1] } return null }
+  const found = {
+    main: first([/\.\/(\d+)\?\d+l/, /\/(\d{3,7})\?\d+l/, /['"](\d{3,7})\?\d+l/]),
+    search: first([/\.\/\d+\?(\d+)l/, /\d{3,7}\?(\d+)l/]),
+    timetable: first([/'(\d+)_'/, /"(\d+)_"/, /sc_data\(\s*['"](\d+)_/])
   }
+  // 그래도 못 찾으면 지난번에 성공한 값 → 그것도 없으면 알려진 기본값으로 시도
+  const saved = (await admin.from('neis_cache').select('data').eq('key', 'comci-routes').maybeSingle()).data?.data as Record<string, string> | undefined
+  const fallback = { main: '36179', search: '17384', timetable: '73629', ...saved }
+  const missing = Object.entries(found).filter(([, x]) => !x).map(([k]) => k)
+  if (!missing.length) {
+    await admin.from('neis_cache').upsert({ key: 'comci-routes', data: found, fetched_at: new Date().toISOString() })
+  }
+  const pageNote = missing.length
+    ? `페이지에서 ${missing.join('/')} 못 찾아 ${saved ? '지난번 값' : '기본값'} 사용 (페이지 ${html.length}자, 앞부분: ${html.replace(/\s+/g, ' ').slice(0, 160)})`
+    : ''
   const may = (re: RegExp) => re.exec(html)?.[0] ?? null
   const v: ComciRoutes = {
-    main: must(/(?<=\.\/)\d+(?=\?\d+l)/, 'main'),
-    search: must(/(?<=\?)\d+(?=l)/, 'search'),
-    timetable: must(/(?<=')\d+(?=_')/, 'timetable'),
+    main: found.main ?? fallback.main,
+    search: found.search ?? fallback.search,
+    timetable: found.timetable ?? fallback.timetable,
     teacher: may(/(?<=성명\s*=\s*자료\.자료)\d+/),
     original: may(/(?<=원자료\s*=\s*Q자료\(자료.자료)\d+/),
     day: may(/(?<=일일자료\s*=\s*Q자료\(자료.자료)\d+/),
     subject: may(/(?<=자료.자료)\d+(?=\[sb\])/),
     // 못 찾았을 때 원인을 보려고 페이지 일부를 남겨 둠
-    note: `한글 ${/[가-힣]/.test(html) ? '있음' : '없음'}, 자료 참조: ${[...new Set(html.match(/.{0,8}자료\.자료\d+.{0,6}/g) ?? [])].slice(0, 6).join(' | ')}`
+    note: `${pageNote ? pageNote + '; ' : ''}한글 ${/[가-힣]/.test(html) ? '있음' : '없음'}, 자료 참조: ${[...new Set(html.match(/.{0,8}자료\.자료\d+.{0,6}/g) ?? [])].slice(0, 6).join(' | ')}`
   }
   comciRoutes = { at: Date.now(), v }
   return v
@@ -186,7 +198,13 @@ async function getComciRoutes(): Promise<ComciRoutes> {
 async function comciJson(path: string) {
   const res = await fetch(`${COMCI}/${path}`, { headers: comciHeaders })
   if (!res.ok) throw new Error(`컴시간알리미 응답 ${res.status}`)
-  return JSON.parse((await res.text()).replace(/\0+$/, ''))
+  const text = (await res.text()).replace(/\0+$/, '')
+  try {
+    return JSON.parse(text)
+  } catch {
+    const note = comciRoutes?.v.note.split('; 한글')[0] ?? ''
+    throw new Error(`컴시간알리미 응답을 못 읽음 (${text.length}자)${note ? `; ${note}` : ''}`)
+  }
 }
 
 const squash = (s: string) => s.replace(/\s/g, '')
