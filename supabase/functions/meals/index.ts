@@ -159,9 +159,15 @@ let comciRoutes: { at: number; v: ComciRoutes } | null = null
 
 async function getComciRoutes(): Promise<ComciRoutes> {
   if (comciRoutes && Date.now() - comciRoutes.at < 3600_000) return comciRoutes.v
-  const res = await fetch(`${COMCI}/st`, { headers: comciHeaders })
-  // Supabase 함수 환경의 TextDecoder 는 euc-kr 을 못 읽어서 한글이 깨짐 → iconv 로 읽음
-  const html = iconv.decode(Buffer.from(await res.arrayBuffer()), 'euc-kr')
+  // 첫 페이지를 못 받아도 아래에서 지난번 값/기본값으로 시도할 수 있게 빈 페이지로 계속함
+  let html = ''
+  try {
+    const res = await comciFetch(`${COMCI}/st`)
+    // Supabase 함수 환경의 TextDecoder 는 euc-kr 을 못 읽어서 한글이 깨짐 → iconv 로 읽음
+    html = iconv.decode(Buffer.from(await res.arrayBuffer()), 'euc-kr')
+  } catch (e) {
+    console.error('컴시간알리미 첫 페이지 실패:', (e as Error).message)
+  }
   // 페이지가 조금 바뀌어도 찾도록 여러 모양으로 시도 (첫 번째 괄호 안 숫자를 씀)
   const first = (res: RegExp[]) => { for (const re of res) { const m = re.exec(html); if (m) return m[1] } return null }
   const found = {
@@ -195,8 +201,20 @@ async function getComciRoutes(): Promise<ComciRoutes> {
   return v
 }
 
+// 컴시간알리미 서버가 가끔 연결을 끊어서(connection closed) 몇 번 다시 시도함
+async function comciFetch(url: string) {
+  let last: unknown
+  for (const wait of [0, 700, 2000]) {
+    if (wait) await new Promise((r) => setTimeout(r, wait))
+    try {
+      return await fetch(url, { headers: comciHeaders, signal: AbortSignal.timeout(10_000) })
+    } catch (e) { last = e }
+  }
+  throw new Error(`컴시간알리미 서버에 연결이 안 됨 (${String((last as Error)?.message ?? last).slice(0, 120)})`)
+}
+
 async function comciJson(path: string) {
-  const res = await fetch(`${COMCI}/${path}`, { headers: comciHeaders })
+  const res = await comciFetch(`${COMCI}/${path}`)
   if (!res.ok) throw new Error(`컴시간알리미 응답 ${res.status}`)
   const text = (await res.text()).replace(/\0+$/, '')
   try {
@@ -343,7 +361,10 @@ async function comciTimetable(from: string, to: string, grade: number, classNo: 
   if (!sc.name) throw new Error('학교 이름이 없음')
   const code = await comciSchoolCode(sc.name)
 
-  const week = await cached(`comci7:${code}:${grade}-${classNo}:${monday}`, async () => {
+  const weekKey = `comci7:${code}:${grade}-${classNo}:${monday}`
+  let week
+  try {
+  week = await cached(weekKey, async () => {
     const r = await getComciRoutes()
     const data = await comciJson(`${r.main}_T?${btoa(`${r.timetable}_${code}_0_1`)}`)
     const neisRows: { date: string; period: number; subject: string }[] = await neisTimetable(monday, addDaysIso(monday, 4), grade, classNo, sc).catch(() => [])
@@ -398,8 +419,15 @@ async function comciTimetable(from: string, to: string, grade: number, classNo: 
     if (!rows.length) throw new Error('컴시간알리미에 이 반 시간표가 없음')
     return rows
   }, (at) => Date.now() - new Date(at).getTime() < COMCI_MINUTES * 60_000)
+  } catch (e) {
+    // 컴시간알리미가 잠깐 안 될 때는 마지막으로 받아 둔 이번 주 시간표를 씀 (NEIS 보다 정확함)
+    const { data: stale } = await admin.from('neis_cache').select('*').eq('key', weekKey).maybeSingle()
+    if (!stale?.data?.length) throw e
+    const at = new Date(new Date(stale.fetched_at).getTime() + 9 * 3600_000).toISOString().slice(5, 16).replace('T', ' ')
+    week = (stale.data as { note?: string }[]).map((r, i) => i ? r : { ...r, note: `컴시간알리미에 지금 연결이 안 돼서 ${at}에 받아 둔 시간표를 보여줘요 (${(e as Error).message})` })
+  }
 
-  return week.filter((r) => r.date >= from && r.date <= to)
+  return (week as { date: string }[]).filter((r) => r.date >= from && r.date <= to)
 }
 
 function schedule(from: string, to: string, sc: School) {
