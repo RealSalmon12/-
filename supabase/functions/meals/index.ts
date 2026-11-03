@@ -228,6 +228,9 @@ async function comciSchoolCode(name: string): Promise<number> {
 }
 
 type Grid = number[][][][]
+// 칸 값: 숫자, 또는 교체된 칸이면 '>22014' 같은 문자열
+const cellNum = (x: unknown) => typeof x === 'number' ? x : Number(String(x ?? '').replace(/[^0-9]/g, '')) || 0
+
 const sameName = (a: string, b: string) => { const x = squash(a), y = squash(b); return !!x && !!y && (x.includes(y) || y.includes(x)) }
 
 type Parts = {
@@ -274,7 +277,7 @@ function inferComci(data: Record<string, unknown>, grade: number, classNo: numbe
     let score = 0
     const week = g[grade][classNo]
     for (let d = 1; d <= 5; d++) for (let p = 1; p < (week[d]?.length ?? 0); p++) {
-      const v = week[d][p]; const n = neis.get(`${d}-${p}`)
+      const v = cellNum(week[d][p]); const n = neis.get(`${d}-${p}`)
       if (v && n && same(String(subj[subjectNo(v)] ?? ''), n)) score++
     }
     return score
@@ -322,7 +325,7 @@ async function comciTimetable(from: string, to: string, grade: number, classNo: 
   if (!sc.name) throw new Error('학교 이름이 없음')
   const code = await comciSchoolCode(sc.name)
 
-  const week = await cached(`comci6:${code}:${grade}-${classNo}:${monday}`, async () => {
+  const week = await cached(`comci7:${code}:${grade}-${classNo}:${monday}`, async () => {
     const r = await getComciRoutes()
     const data = await comciJson(`${r.main}_T?${btoa(`${r.timetable}_${code}_0_1`)}`)
     const neisRows: { date: string; period: number; subject: string }[] = await neisTimetable(monday, addDaysIso(monday, 4), grade, classNo, sc).catch(() => [])
@@ -352,8 +355,11 @@ async function comciTimetable(from: string, to: string, grade: number, classNo: 
     for (let d = 1; d <= 5; d++) {
       const periods = days[d] ?? []
       for (let p = 1; p < periods.length; p++) {
-        const v = periods[p]
+        // 교체된 칸은 문자열로 앞에 '>' 가 붙어 옴 (예: '>22014'). 숫자만 꺼내 쓰고, 교체 표시로 씀
+        const raw = periods[p] as unknown
+        const v = cellNum(raw)
         if (!v) continue
+        const swapped = typeof raw === 'string' && raw.trim().startsWith('>')
         const date = addDaysIso(monday, d - 1)
         let subject = subjectOf(v)
         if (!subject) {
@@ -365,16 +371,12 @@ async function comciTimetable(from: string, to: string, grade: number, classNo: 
         const full = neisAt.get(`${date}-${p}`)
         if (full && sameName(full, subject)) subject = full
         const teacher = String(teachers?.[teacherNo(v)] ?? '').replace(/\*$/, '').trim()
-        rows.push({ date, period: p, subject, teacher, changed: !!orig[d] && orig[d][p] !== v, src: 'comci' })
+        rows.push({ date, period: p, subject, teacher, changed: swapped || (!!orig[d] && cellNum(orig[d][p]) !== v), src: 'comci' })
       }
     }
     // 원인 확인용: 어떤 자료를 골랐는지, 못 읽은 칸 값이 뭔지
-    // 원인 확인용 자세한 자료: 과목·교사 목록 전체, 이 반 일일/원 칸 값
-    const list = (a: unknown[] | undefined) => (a ?? []).map((x, i) => `${i}:${x === null ? 'null' : String(x)}`).join(',')
-    const cellVals = (g: Grid | undefined) => [1, 2, 3, 4, 5].map((d) => (g?.[grade]?.[classNo]?.[d] ?? []).slice(1).join('/')).join(' | ')
-    const dump = `과목목록[${list(subjects)}] 교사목록[${list(teachers)}] 일일칸[${cellVals(now)}] 원칸[${cellVals(original)}]`
-    const note = `${parts.how}; 과목 ${subjects.length}개, 교사 ${teachers?.length ?? 0}개${altUsed.size ? `; 다른 목록 사용: ${[...altUsed].join(',')}` : ''}${failed.length ? `; 못 읽은 칸: ${failed.slice(0, 12).join(' ')}; 다른 목록: ${otherLists.map(([k, a]) => `${k}(${a.length})`).join(',') || '없음'}; ${dump}` : ''}`
-    if (rows[0]) rows[0].note = note
+    const note = `${parts.how}; 과목 ${subjects.length}개, 교사 ${teachers?.length ?? 0}개${altUsed.size ? `; 다른 목록 사용: ${[...altUsed].join(',')}` : ''}${failed.length ? `; 못 읽은 칸: ${failed.slice(0, 12).join(' ')}; 다른 목록: ${otherLists.map(([k, a]) => `${k}(${a.length})`).join(',') || '없음'}` : ''}`
+    if (rows[0] && failed.length) rows[0].note = note
     if (!rows.length) throw new Error('컴시간알리미에 이 반 시간표가 없음')
     return rows
   }, (at) => Date.now() - new Date(at).getTime() < COMCI_MINUTES * 60_000)
