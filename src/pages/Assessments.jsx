@@ -10,12 +10,20 @@ import DueList from '../components/DueList.jsx'
 import { PlusIcon } from '../components/Icons.jsx'
 
 export default function Assessments() {
-  const { member, canPost } = useSession()
+  const { user, member, canPost } = useSession()
   const { done, toggle } = useDone()
   const [items, setItems] = useState([])
   const [subject, setSubject] = useState('')
   const [view, setView] = useState('list')
-  const [hideDone, setHideDone] = useState(false)
+  // 끝낸 것 숨기기는 기기·계정마다 기억해서, 다른 화면 갔다 와도 그대로 둠
+  const hideKey = `bacoclass:hideDone:${user.id}`
+  const [hideDone, setHideDoneState] = useState(() => {
+    try { return localStorage.getItem(hideKey) === '1' } catch { return false }
+  })
+  const setHideDone = (v) => {
+    setHideDoneState(v)
+    try { v ? localStorage.setItem(hideKey, '1') : localStorage.removeItem(hideKey) } catch { /* 저장 못 해도 이번엔 적용 */ }
+  }
   const [showPast, setShowPast] = useState(false)
 
   useEffect(() => {
