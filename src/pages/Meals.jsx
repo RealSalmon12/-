@@ -45,7 +45,7 @@ export default function Meals() {
         </button>
         <button className="step" onClick={() => setDate(addDays(date, 1))} aria-label="다음날">›</button>
       </div>
-      {loading ? <div className="menu-ghost" />
+      {loading ? <div className="tray tray-ghost" />
         : error ? <p className="error">{error} 잠시 뒤 다시 열어 주세요.</p>
         : list.length ? list.map((m) => (
           <section key={m.meal_type} className="section">

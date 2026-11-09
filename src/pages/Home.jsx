@@ -66,18 +66,27 @@ export default function Home() {
 
   return (
     <div className="page">
-      <header className="masthead">
-        <div>
-          <p className="masthead-date">{formatDate(t)}</p>
-          <h1 className="masthead-class">{member.classes.name}</h1>
-          {member.classes.school_name && <p className="masthead-date">{member.classes.school_name}</p>}
+      <header className="hero">
+        <div className="hero-top">
+          <div>
+            <p className="hero-date">{formatDate(t)}</p>
+            <h1 className="hero-class">{member.classes.name}</h1>
+            {member.classes.school_name && <p className="hero-school">{member.classes.school_name}</p>}
+          </div>
+          <div className="masthead-actions">
+            {isTeacher && <Link className="hero-btn" to="/class">반 관리</Link>}
+            <Link to="/account" className="masthead-avatar" aria-label="내 계정">
+              <Avatar url={avatarUrl(avatarPath)} name={member.display_name} size={40} />
+            </Link>
+          </div>
         </div>
-        <div className="masthead-actions">
-          {isTeacher && <Link className="btn-quiet" to="/class">반 관리</Link>}
-          <Link to="/account" className="masthead-avatar" aria-label="내 계정">
-            <Avatar url={avatarUrl(avatarPath)} name={member.display_name} size={40} />
-          </Link>
-        </div>
+        <Link to="/timetable" className="hero-tt" aria-label="오늘 시간표, 눌러서 이번 주 보기">
+          {timetable.data.length
+            ? [...timetable.data].sort((a, b) => a.period - b.period).map((r) => (
+              <span key={r.period}><b>{r.period}</b>{r.subject}</span>
+            ))
+            : <span className="hero-tt-empty">{timetable.loading ? '시간표 불러오는 중…' : '오늘은 수업이 없어요 · 이번 주 시간표 보기'}</span>}
+        </Link>
       </header>
 
       {recent && (
@@ -99,20 +108,6 @@ export default function Home() {
 
       <section className="section">
         <div className="section-head">
-          <h2>오늘 시간표</h2>
-          <Link className="more" to="/timetable">이번 주</Link>
-        </div>
-        {timetable.data.length ? (
-          <Link to="/timetable" className="today-strip" aria-label="오늘 시간표, 눌러서 이번 주 보기">
-            {[...timetable.data].sort((a, b) => a.period - b.period).map((r) => (
-              <span key={r.period}><b>{r.period}교시</b>{r.subject}</span>
-            ))}
-          </Link>
-        ) : <p className="empty">{timetable.loading ? '불러오는 중…' : '오늘은 수업이 없어요.'}</p>}
-      </section>
-
-      <section className="section">
-        <div className="section-head">
           <h2>오늘 급식{shown?.calories && <span className="fine h2-note">{shown.calories.replace(' Kcal', ' kcal')}</span>}</h2>
           {meals.list.length > 1 && (
             <div className="toggle" role="tablist">
@@ -125,7 +120,7 @@ export default function Home() {
             </div>
           )}
         </div>
-        {meals.loading ? <div className="menu-ghost" />
+        {meals.loading ? <div className="tray tray-ghost" />
           : shown ? (
             <>
               <Tray dishes={shown.dishes} />
@@ -148,10 +143,10 @@ export default function Home() {
       </section>
 
       <nav className="quick" aria-label="바로가기">
-        <Link to="/notices"><span className="quick-icon"><PaperIcon /></span>통신문{newNotices > 0 && <span className="badge">{newNotices}</span>}</Link>
-        <Link to="/announcements"><span className="quick-icon"><MegaphoneIcon /></span>공지</Link>
-        <Link to="/dday"><span className="quick-icon"><CalendarIcon /></span>일정</Link>
-        <Link to="/calls"><span className="quick-icon"><BellIcon /></span>호출</Link>
+        <Link to="/notices" className="q-sky"><span className="quick-icon"><PaperIcon /></span>통신문{newNotices > 0 && <span className="badge">{newNotices}</span>}</Link>
+        <Link to="/announcements" className="q-sun"><span className="quick-icon"><MegaphoneIcon /></span>공지</Link>
+        <Link to="/dday" className="q-mint"><span className="quick-icon"><CalendarIcon /></span>일정</Link>
+        <Link to="/calls" className="q-lilac"><span className="quick-icon"><BellIcon /></span>호출</Link>
       </nav>
 
       <InstallHint />
