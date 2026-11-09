@@ -66,6 +66,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .error { color: var(--redpen); }
 .prose { white-space: pre-wrap; line-height: 1.75; max-width: 34em; }
 .splash { min-height: 100vh; background: var(--paper); }
+.page-loading { min-height: 60vh; }
 
 /* 홈 머리 */
 .masthead { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
