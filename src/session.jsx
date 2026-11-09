@@ -3,12 +3,29 @@ import { supabase } from './supabase.js'
 
 const SessionContext = createContext(null)
 
+// 게스트(로그인 없이 둘러보기): 학교·학년·반만 이 기기에 저장
+const GUEST_KEY = 'bacoclass-guest'
+function readGuest() {
+  try { return JSON.parse(localStorage.getItem(GUEST_KEY)) } catch { return null }
+}
+// 게스트도 화면 코드가 그대로 쓸 수 있게 반 정보 모양으로 바꿈
+function guestMember(g) {
+  return {
+    guest: true, class_id: null, role: 'guest', display_name: '게스트',
+    classes: {
+      name: `${g.grade}학년 ${g.classNo}반`, grade: g.grade, class_no: g.classNo,
+      office_code: g.office, school_code: g.code, school_name: g.name, school_kind: g.kind
+    }
+  }
+}
+
 export const POSTER_ROLES = ['teacher', 'president', 'vice']
-export const ROLE_NAMES = { teacher: '선생님', president: '반장', vice: '부반장', student: '학생' }
+export const ROLE_NAMES = { teacher: '선생님', president: '반장', vice: '부반장', student: '학생', guest: '게스트' }
 
 export function SessionProvider({ children }) {
   const [user, setUser] = useState(undefined) // undefined = 아직 확인 중
   const [member, setMember] = useState(undefined)
+  const [guest, setGuest] = useState(readGuest)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null))
@@ -41,12 +58,27 @@ export function SessionProvider({ children }) {
 
   useEffect(() => { loadMember() }, [loadMember])
 
+  const startGuest = (g) => {
+    try { localStorage.setItem(GUEST_KEY, JSON.stringify(g)) } catch { /* 이번만 */ }
+    setGuest(g)
+  }
+  const endGuest = () => {
+    try { localStorage.removeItem(GUEST_KEY) } catch { /* 무시 */ }
+    setGuest(null)
+  }
+  const isGuest = user === null && !!guest
+  // 로그인하면 게스트 설정은 지움 (로그아웃하면 처음 화면으로)
+  useEffect(() => { if (user && guest) endGuest() }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const value = {
     user,
-    member,
+    member: isGuest ? guestMember(guest) : member,
+    isGuest,
+    startGuest,
+    endGuest,
     reloadMember: loadMember,
-    canPost: !!member && POSTER_ROLES.includes(member.role),
-    isTeacher: member?.role === 'teacher'
+    canPost: !isGuest && !!member && POSTER_ROLES.includes(member.role),
+    isTeacher: !isGuest && member?.role === 'teacher'
   }
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
 }

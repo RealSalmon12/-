@@ -43,6 +43,7 @@ export default function Timetable() {
   useEffect(() => { setMonday(mondayOf(t)) }, [t])
 
   useEffect(() => {
+    if (!member.class_id) return // 게스트는 수행평가 없음
     supabase.from('assessments').select('id, subject, title, due_date')
       .eq('class_id', member.class_id).gte('due_date', monday).lte('due_date', friday)
       .then(({ data }) => setDue(data ?? []))
@@ -77,15 +78,11 @@ export default function Timetable() {
             ))}
           </div>
         )}
-      <p className="fine">빨간 점이 있는 칸은 그날 그 과목 수행평가가 있다는 뜻이에요. 이번 주 시간표는 컴시간알리미에서 가져와서 교체·보강도 바로 보여요(점선 칸이 바뀐 수업). 안 되면 NEIS 시간표를 보여줘요.</p>
-      {data[0]?.src && (
-        <p className="fine">
-          지금 보이는 시간표: {data[0].src === 'comci' ? '컴시간알리미' : 'NEIS'}
-          {data[0].src === 'neis' && data[0].why && ` (컴시간알리미에서 못 가져온 이유: ${data[0].why})`}
-        </p>
-      )}
-      {data.find((r) => r.note) && <p className="fine">확인용: {data.find((r) => r.note).note}</p>}
-      <p className="neis-credit">시간표 자료 출처: 컴시간알리미, 나이스 교육정보 개방 포털</p>
+      <p className="fine legend-line">
+        <span><i className="tt-dot static" /> 수행평가 있는 날</span>
+        <span><i className="tt-changed-mark" /> 바뀐 수업</span>
+      </p>
+      <p className="neis-credit">시간표 출처: {data[0]?.src === 'neis' ? '나이스 교육정보 개방 포털' : '컴시간알리미, 나이스 교육정보 개방 포털'}</p>
     </div>
   )
 }

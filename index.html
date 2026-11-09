@@ -3,7 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#34406a" />
+    <meta name="theme-color" content="#f2f4f6" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#101114" media="(prefers-color-scheme: dark)" />
     <link rel="icon" href="/icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <!-- 아이폰·아이패드·맥에서 홈 화면/Dock 에 추가했을 때 앱 이름과 모양 -->
@@ -12,13 +13,12 @@
     <meta name="apple-mobile-web-app-title" content="BacoClass" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <title>BacoClass</title>
-    <!-- 앱 코드가 받아지기 전에도 하얀 화면 대신 바코가 보이게 -->
+    <!-- 앱 코드가 받아지기 전에도 빈 화면 대신 아이콘이 보이게 -->
     <style>
-      html, body { margin: 0; background: #f4ede6; }
-      @media (prefers-color-scheme: dark) { html, body { background: #19181d; } }
+      html, body { margin: 0; background: #f2f4f6; }
+      @media (prefers-color-scheme: dark) { html, body { background: #101114; } }
       .boot { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-      .boot img { width: 88px; height: 88px; border-radius: 22px; animation: boot 1.2s ease-in-out infinite alternate; }
-      @keyframes boot { from { transform: translateY(0); } to { transform: translateY(-6px); } }
+      .boot img { width: 72px; height: 72px; border-radius: 18px; }
     </style>
   </head>
   <body>

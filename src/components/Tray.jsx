@@ -2,56 +2,21 @@ import { parseDish } from '../util.js'
 
 const RICE = /(밥|라이스|덮밥|볶음밥|죽)$/
 const SOUP = /(국|찌개|탕|스프|수프|국수|우동|라면|짬뽕|전골)$/
-const DESSERT = /(요구르트|요거트|요플레|플레인|우유|주스|쥬스|음료|과일|케이크|케익|푸딩|아이스|빵|쿠키|바나나|사과|귤|포도|수박|멜론|키위|딸기|파인애플|오렌지)/
 
-// NEIS 메뉴 목록을 식판 칸(밥, 국, 반찬, 후식)으로 나눔
-export function arrangeTray(dishes) {
-  const items = dishes.map(parseDish)
-  const take = (re) => {
-    const i = items.findIndex((d) => re.test(d.name.replace(/\s/g, '')))
-    return i < 0 ? null : items.splice(i, 1)[0]
-  }
-  const rice = take(RICE) ?? items.shift() ?? null
-  const soup = take(SOUP)
-  const desserts = []
-  for (let d; (d = take(DESSERT)); ) desserts.push(d)
-  return { rice, soup, sides: items, desserts }
-}
-
-function Dish({ dish, showAllergies }) {
-  if (!dish) return null
-  return (
-    <>
-      <span className="dish-name">{dish.name}</span>
-      {showAllergies && dish.allergies && <span className="dish-allergy">{dish.allergies}</span>}
-    </>
-  )
-}
-
+// 급식 메뉴를 한 줄씩. 밥·국은 굵게, 알레르기 번호는 원할 때만 작게
 export default function Tray({ dishes, showAllergies = false }) {
-  const { rice, soup, sides, desserts } = arrangeTray(dishes)
-  const top = sides.length ? sides : [null]
+  const items = dishes.map(parseDish)
   return (
-    <div className="tray-wrap">
-      <div className="tray" role="list" aria-label="급식 메뉴">
-        {/* 반찬 수에 맞춰 칸을 나눔(4개면 2×2). 좁은 폰에서 한 칸만 아래로 떨어지지 않게 */}
-        <div className="tray-row tray-sides" style={{ gridTemplateColumns: `repeat(${top.length === 4 ? 2 : Math.min(top.length, 3)}, minmax(0, 1fr))` }}>
-          {top.map((d, i) => (
-            <div key={i} className="well" role="listitem"><Dish dish={d} showAllergies={showAllergies} /></div>
-          ))}
-        </div>
-        <div className={desserts.length ? 'tray-row tray-main has-dessert' : 'tray-row tray-main'}>
-          <div className="well well-rice" role="listitem"><Dish dish={rice} showAllergies={showAllergies} /></div>
-          <div className="well well-soup" role="listitem"><Dish dish={soup} showAllergies={showAllergies} /></div>
-          {desserts.length > 0 && (
-            <div className="tray-desserts">
-              {desserts.map((d, i) => (
-                <div key={i} className="well well-dessert" role="listitem"><Dish dish={d} showAllergies={showAllergies} /></div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
+    <ul className="menu" aria-label="급식 메뉴">
+      {items.map((d, i) => {
+        const key = d.name.replace(/\s/g, '')
+        return (
+          <li key={i} className={RICE.test(key) || SOUP.test(key) ? 'main' : ''}>
+            {d.name}
+            {showAllergies && d.allergies && <span className="dish-allergy">{d.allergies}</span>}
+          </li>
+        )
+      })}
+    </ul>
   )
 }
