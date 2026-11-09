@@ -3,6 +3,11 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  build: {
+    // 글꼴을 CSS 안에 글자로 박아 넣으면 CSS가 750KB가 되어 첫 화면이 하얗게 멈춤.
+    // 글꼴은 따로 파일로 두면 브라우저가 화면에 쓰인 글자 묶음만 골라 받음.
+    assetsInlineLimit: (file) => (/\.woff2?$/.test(file) ? false : undefined)
+  },
   plugins: [
     react(),
     VitePWA({
@@ -12,7 +17,13 @@ export default defineConfig({
         navigateFallbackDenylist: [/^\/privacy/],
         // PDF 그리기(약 1.6MB)는 설치 때 미리 받지 않고, 가정통신문 목록을 열 때만 받음
         globIgnores: ['**/pdf-*.js', '**/pdf.worker*'],
-        importScripts: ['push-sw.js'] // 푸시 알림 받기
+        importScripts: ['push-sw.js'], // 푸시 알림 받기
+        // 글꼴은 한 번 받으면 기기에 저장해 두고 다음부터 바로 씀
+        runtimeCaching: [{
+          urlPattern: ({ request }) => request.destination === 'font',
+          handler: 'CacheFirst',
+          options: { cacheName: 'fonts', expiration: { maxEntries: 400, maxAgeSeconds: 60 * 60 * 24 * 365 } }
+        }]
       },
       includeAssets: ['icon.svg', 'apple-touch-icon.png'],
       manifest: {

@@ -12,9 +12,17 @@
     <meta name="apple-mobile-web-app-title" content="BacoClass" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <title>BacoClass</title>
+    <!-- 앱 코드가 받아지기 전에도 하얀 화면 대신 바코가 보이게 -->
+    <style>
+      html, body { margin: 0; background: #f4ede6; }
+      @media (prefers-color-scheme: dark) { html, body { background: #19181d; } }
+      .boot { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+      .boot img { width: 88px; height: 88px; border-radius: 22px; animation: boot 1.2s ease-in-out infinite alternate; }
+      @keyframes boot { from { transform: translateY(0); } to { transform: translateY(-6px); } }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root"><div class="boot"><img src="/icon-192.png" alt="BacoClass 불러오는 중" /></div></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
