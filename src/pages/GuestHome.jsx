@@ -23,28 +23,23 @@ export default function GuestHome() {
 
   return (
     <div className="page">
-      <header className="masthead">
-        <div>
-          <p className="masthead-date">{formatDate(t)}</p>
-          <h1 className="masthead-class">{member.classes.name}</h1>
-          <p className="masthead-date">{member.classes.school_name}</p>
+      <header className="hero">
+        <div className="hero-top">
+          <div>
+            <p className="hero-date">{formatDate(t)}</p>
+            <h1 className="hero-class">{member.classes.name}</h1>
+            <p className="hero-school">{member.classes.school_name}</p>
+          </div>
+          <button className="hero-btn" onClick={endGuest}>학교 바꾸기</button>
         </div>
-        <button className="btn-quiet" onClick={endGuest}>학교 바꾸기</button>
+        <Link to="/timetable" className="hero-tt">
+          {timetable.data.length
+            ? [...timetable.data].sort((a, b) => a.period - b.period).map((r) => (
+              <span key={r.period}><b>{r.period}</b>{r.subject}</span>
+            ))
+            : <span className="hero-tt-empty">{timetable.loading ? '시간표 불러오는 중…' : timetable.error || '오늘은 수업이 없어요 · 이번 주 시간표 보기'}</span>}
+        </Link>
       </header>
-
-      <section className="section">
-        <div className="section-head">
-          <h2>오늘 시간표</h2>
-          <Link className="more" to="/timetable">이번 주</Link>
-        </div>
-        {timetable.data.length ? (
-          <Link to="/timetable" className="today-strip">
-            {[...timetable.data].sort((a, b) => a.period - b.period).map((r) => (
-              <span key={r.period}><b>{r.period}교시</b>{r.subject}</span>
-            ))}
-          </Link>
-        ) : <p className="empty">{timetable.loading ? '불러오는 중…' : timetable.error || '오늘은 수업이 없어요.'}</p>}
-      </section>
 
       <section className="section">
         <div className="section-head">
@@ -60,7 +55,7 @@ export default function GuestHome() {
             </div>
           )}
         </div>
-        {meals.loading ? <div className="menu-ghost" />
+        {meals.loading ? <div className="tray tray-ghost" />
           : shown ? <Tray dishes={shown.dishes} />
           : <p className="empty">오늘은 급식이 없어요.</p>}
         <Link className="more" to="/meals">다른 날 급식 · 알레르기 보기</Link>
