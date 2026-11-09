@@ -18,7 +18,7 @@ export function getTheme() {
 export function applyTheme(id) {
   const dark = id === 'dark' || (id === 'auto' && darkQuery?.matches)
   document.documentElement.dataset.theme = dark ? 'dark' : 'light'
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#0f1420' : '#e9edf3')
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#0f1420' : '#dfe5ee')
 }
 
 export function setTheme(id) {
