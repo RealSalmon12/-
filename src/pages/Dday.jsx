@@ -20,12 +20,9 @@ export function useEvents(classId) {
 
 // 홈: 가장 가까운 D-day 세 개
 export function DdayStrip() {
-  const { member, canPost } = useSession()
+  const { member } = useSession()
   const { events } = useEvents(member.class_id)
-  if (!events) return null
-  if (!events.length) {
-    return canPost ? <Link to="/dday" className="call-strip"><b>D-day 만들기</b><span className="fine">시험·수학여행까지 남은 날</span></Link> : null
-  }
+  if (!events?.length) return null
   return (
     <Link to="/dday" className="dday-strip" aria-label="반 D-day 전체 보기">
       {events.slice(0, 3).map((e) => (

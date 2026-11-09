@@ -28,3 +28,15 @@ export const PhotoIcon = () => (
 export const PollIcon = () => (
   <svg {...base}><path d="M5 20V10M12 20V4M19 20v-7" /></svg>
 )
+export const BellIcon = () => (
+  <svg {...base}><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z" /><path d="M10 20.5a2 2 0 0 0 4 0" /></svg>
+)
+export const MegaphoneIcon = () => (
+  <svg {...base}><path d="M4 10v4h3l7 4V6L7 10z" /><path d="M17.5 9.5a3.5 3.5 0 0 1 0 5" /></svg>
+)
+export const CalendarIcon = () => (
+  <svg {...base}><rect x="4" y="5" width="16" height="15" rx="2.5" /><path d="M4 10h16M9 3v4M15 3v4" /></svg>
+)
+export const ChevronIcon = () => (
+  <svg {...base} width="18" height="18"><path d="m9 6 6 6-6 6" /></svg>
+)

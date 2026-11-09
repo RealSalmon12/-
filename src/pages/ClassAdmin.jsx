@@ -10,6 +10,7 @@ export default function ClassAdmin() {
   const { member, isTeacher, reloadMember } = useSession()
   const navigate = useNavigate()
   const [members, setMembers] = useState([])
+  const [origins, setOrigins] = useState({}) // user_id → 처음 이름, 구글 계정 (016 SQL 필요)
   const [grade, setGrade] = useState(member.classes.grade ?? '')
   const [classNo, setClassNo] = useState(member.classes.class_no ?? '')
   const [saved, setSaved] = useState('')
@@ -25,6 +26,8 @@ export default function ClassAdmin() {
     supabase.from('members').select('user_id, display_name, role')
       .eq('class_id', member.class_id).order('display_name')
       .then(({ data }) => setMembers(data ?? []))
+    supabase.rpc('member_origins', { cid: member.class_id })
+      .then(({ data }) => setOrigins(Object.fromEntries((data ?? []).map((o) => [o.user_id, o]))))
 
   useEffect(() => { load() }, [member.class_id])
 
@@ -117,7 +120,10 @@ export default function ClassAdmin() {
         <ul className="member-list">
           {members.map((m) => (
             <li key={m.user_id}>
-              <span>{m.display_name}</span>
+              <span className="member-who">
+                <span>{m.display_name}</span>
+                {origins[m.user_id] && <Origin o={origins[m.user_id]} now={m.display_name} />}
+              </span>
               {m.role === 'teacher' ? <span className="fine">{ROLE_NAMES.teacher}</span> : (
                 <span className="member-actions">
                   <select value={m.role} onChange={(e) => setRole(m.user_id, e.target.value)}>
@@ -136,4 +142,13 @@ export default function ClassAdmin() {
       <Link className="btn-text quiet" to="/account">내 계정 · 로그아웃 · 계정 초기화</Link>
     </div>
   )
+}
+
+// 처음 가입할 때 적은 이름과 로그인한 구글 계정 (선생님만 보임)
+function Origin({ o, now }) {
+  const parts = []
+  if (o.joined_name && o.joined_name !== now) parts.push(`처음 이름 ${o.joined_name}`)
+  if (o.google_name) parts.push(`구글 ${o.google_name}`)
+  if (o.email) parts.push(o.email)
+  return parts.length ? <span className="fine member-origin">{parts.join(' · ')}</span> : null
 }

@@ -4,8 +4,9 @@ import { useSession } from './session.jsx'
 import Login from './pages/Login.jsx'
 import Join from './pages/Join.jsx'
 import Home from './pages/Home.jsx'
+import GuestHome from './pages/GuestHome.jsx'
 import { UnreadProvider, useUnread, Badge } from './unread.jsx'
-import { HomeIcon, PencilIcon, GridIcon, ChatIcon } from './components/Icons.jsx'
+import { HomeIcon, PencilIcon, GridIcon, ChatIcon, TrayIcon } from './components/Icons.jsx'
 
 // 홈 말고 다른 화면은 들어갈 때 받음 (처음 열 때 받는 양 줄이기)
 const Assessments = lazy(() => import('./pages/Assessments.jsx'))
@@ -35,13 +36,13 @@ const TABS = [
 ]
 
 export default function App() {
-  const { user, member } = useSession()
+  const { user, member, isGuest } = useSession()
   const { pathname } = useLocation()
 
   if (user === undefined || (user && member === undefined)) {
     return <div className="boot"><img src="/icon-192.png" alt="BacoClass 불러오는 중" /></div>
   }
-  if (!user) return <Login />
+  if (!user) return isGuest ? <GuestShell /> : <Login />
   if (!member) return <Join />
 
   return (
@@ -91,6 +92,38 @@ function Shell({ pathname }) {
               <t.Icon />
               {t.to === '/chat' && <Badge n={total} />}
             </span>
+            {t.label}
+          </NavLink>
+        ))}
+      </nav>
+    </div>
+  )
+}
+
+// 로그인 없이 둘러보기: 홈(오늘), 급식, 시간표만
+const GUEST_TABS = [
+  { to: '/', label: '홈', Icon: HomeIcon },
+  { to: '/meals', label: '급식', Icon: TrayIcon },
+  { to: '/timetable', label: '시간표', Icon: GridIcon }
+]
+
+function GuestShell() {
+  return (
+    <div className="app">
+      <main>
+        <Suspense fallback={<div className="page-loading" aria-label="불러오는 중" />}>
+          <Routes>
+            <Route path="/" element={<GuestHome />} />
+            <Route path="/meals" element={<Meals />} />
+            <Route path="/timetable" element={<Timetable />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
+      </main>
+      <nav className="tabbar">
+        {GUEST_TABS.map((t) => (
+          <NavLink key={t.to} to={t.to} end={t.to === '/'}>
+            <span className="tab-icon"><t.Icon /></span>
             {t.label}
           </NavLink>
         ))}

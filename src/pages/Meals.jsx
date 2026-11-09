@@ -29,12 +29,12 @@ export default function Meals() {
   const navigate = useNavigate()
   const [date, setDate] = useState(today())
   const { loading, list, error } = useMeals(date, date)
-  const { member } = useSession()
-  const top = useTopMeals(member.class_id, today().slice(0, 7))
+  const { member, isGuest } = useSession()
+  const top = useTopMeals(isGuest ? null : member.class_id, today().slice(0, 7))
 
   return (
     <div className="page">
-      <button className="back" onClick={() => navigate(-1)}>‹ 뒤로</button>
+      {!isGuest && <button className="back" onClick={() => navigate(-1)}>‹ 뒤로</button>}
       <header className="page-head">
         <h1>급식</h1>
       </header>
@@ -45,7 +45,7 @@ export default function Meals() {
         </button>
         <button className="step" onClick={() => setDate(addDays(date, 1))} aria-label="다음날">›</button>
       </div>
-      {loading ? <div className="tray tray-ghost" />
+      {loading ? <div className="menu-ghost" />
         : error ? <p className="error">{error} 잠시 뒤 다시 열어 주세요.</p>
         : list.length ? list.map((m) => (
           <section key={m.meal_type} className="section">
@@ -54,7 +54,7 @@ export default function Meals() {
               {m.calories && <span className="fine">{m.calories.replace(' Kcal', ' kcal')}</span>}
             </div>
             <Tray dishes={m.dishes} showAllergies />
-            <MealRating date={date} type={m.meal_type} />
+            {!isGuest && <MealRating date={date} type={m.meal_type} />}
           </section>
         ))
         : <p className="empty">이 날은 급식이 없어요.</p>}

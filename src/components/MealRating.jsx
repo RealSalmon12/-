@@ -61,6 +61,7 @@ const nextMonth = (month) => {
 export function useTopMeals(classId, month) {
   const [top, setTop] = useState(null)
   useEffect(() => {
+    if (!classId) return
     supabase.from('meal_ratings').select('meal_date, meal_type, score')
       .eq('class_id', classId).gte('meal_date', `${month}-01`).lt('meal_date', nextMonth(month))
       .then(({ data, error }) => {

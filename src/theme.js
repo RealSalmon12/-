@@ -1,27 +1,25 @@
-// 계절 테마: 이 기기에만 저장. 기본은 겨울(포근한 눈)
-export const SEASONS = [
-  { id: 'spring', name: '봄', note: '벚꽃', color: '#b0476b' },
-  { id: 'summer', name: '여름', note: '푸른 잎', color: '#2f7a45' },
-  { id: 'autumn', name: '가을', note: '단풍', color: '#a4471f' },
-  { id: 'winter', name: '겨울', note: '포근한 눈', color: '#34406a' }
+// 강조색: 이 기기에만 저장. 기본은 파랑
+export const ACCENTS = [
+  { id: 'blue', name: '파랑', color: '#3366f0' },
+  { id: 'green', name: '초록', color: '#14a06a' },
+  { id: 'purple', name: '보라', color: '#7a5af0' },
+  { id: 'black', name: '검정', color: '#25282e' }
 ]
-const KEY = 'bacoclass-season'
+const KEY = 'bacoclass-accent'
 
-export function getSeason() {
+export function getAccent() {
   try {
     const s = localStorage.getItem(KEY)
-    if (SEASONS.some((x) => x.id === s)) return s
-  } catch { /* 저장소를 못 쓰면 기본 테마 */ }
-  return 'winter'
+    if (ACCENTS.some((x) => x.id === s)) return s
+  } catch { /* 저장소를 못 쓰면 기본 */ }
+  return 'blue'
 }
 
-export function applySeason(id) {
-  document.documentElement.dataset.season = id
-  // 휴대폰 위쪽 상태 표시줄 색
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', SEASONS.find((s) => s.id === id).color)
+export function applyAccent(id) {
+  document.documentElement.dataset.accent = id
 }
 
-export function setSeason(id) {
+export function setAccent(id) {
   try { localStorage.setItem(KEY, id) } catch { /* 이번만 적용 */ }
-  applySeason(id)
+  applyAccent(id)
 }
