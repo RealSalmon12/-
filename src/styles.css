@@ -722,3 +722,21 @@ button.attach-file { cursor: pointer; }
 :root[data-theme="dark"] .hero { background: linear-gradient(160deg, #1d4fb8, #183a85); }
 .toggle button.on { color: var(--board); }
 h2 { font-size: 17px; }
+
+/* 수행평가 댓글 */
+.comments h2 { display: flex; align-items: center; gap: 8px; }
+.comments-count { font-size: 13px; font-weight: 700; color: var(--board); background: var(--tint); border-radius: 10px; padding: 1px 8px; }
+.comment-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.comment { display: flex; gap: 10px; align-items: flex-start; padding: 10px 0; border-top: 1px solid var(--rule); }
+.comment:first-child { border-top: none; padding-top: 2px; }
+.comment .avatar { flex: none; }
+.comment-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.comment-meta { margin: 0; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 13.5px; }
+.comment-meta time { font-size: 12px; color: var(--ink-soft); }
+.comment-delete { margin-left: auto; padding: 0 2px; font-size: 12.5px; }
+.comment-body { margin: 0; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+.comment-form { display: flex; gap: 8px; align-items: flex-end; }
+.comment-form textarea {
+  flex: 1; min-width: 0; resize: none; padding: 10px 12px; border-radius: 20px; line-height: 1.4;
+  field-sizing: content; min-height: 44px; max-height: 140px;
+}
