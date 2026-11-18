@@ -9,10 +9,11 @@ import { downloadIcs } from '../ics.js'
 import { AttachmentView, removeFiles } from '../components/Attachments.jsx'
 import RiroLink from '../components/RiroLink.jsx'
 import RiroBody, { riroHead } from '../components/RiroBody.jsx'
+import Comments from '../components/Comments.jsx'
 
 export default function AssessmentDetail() {
   const { id } = useParams()
-  const { canPost } = useSession()
+  const { canPost, isGuest, member } = useSession()
   const navigate = useNavigate()
   const [a, setA] = useState(null)
   const { done, toggle } = useDone()
@@ -74,6 +75,7 @@ export default function AssessmentDetail() {
           <button className="btn-danger" onClick={remove}>삭제</button>
         </div>
       )}
+      {!isGuest && member?.class_id && <Comments assessmentId={a.id} />}
     </div>
   )
 }
